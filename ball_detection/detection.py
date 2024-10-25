@@ -13,13 +13,12 @@ image_paths = ['Data/droidcam-20241022-211204.jpg',
     # Detect the largest greenish rectangle and find its corners
 for image_path in image_paths:
     start_time = time()
-
     image = cv2.imread(image_path)
     green_field = detect_field(image)
     corners = green_field.reshape(4, 2)
     image = detect_yellow_circle(image,corners)
 
-    # image = draw_field(image, green_field,corners)
+    image = draw_field(image, green_field,corners)
     cv2.imshow("Green Field"+image_path, image)
 
     end_time = time()

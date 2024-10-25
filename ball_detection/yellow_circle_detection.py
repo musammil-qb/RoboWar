@@ -23,6 +23,7 @@ def detect_yellow_circle(frame
     # Apply the rectangle mask to the yellow result
     result_masked = cv2.bitwise_and(result, result, mask=rect_mask)
     # Convert the result to grayscale for circle detection
+
     gray = cv2.cvtColor(result_masked, cv2.COLOR_BGR2GRAY)
 
     # Apply GaussianBlur to reduce noise
@@ -30,13 +31,13 @@ def detect_yellow_circle(frame
     # TODO configure
     # Detect circles using the Hough Circle Transform
     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1.2, minDist=50,
-                               param1=100, param2=30, minRadius=1, maxRadius=100)
+                               param1=100, param2=30, minRadius=5, maxRadius=100)
     # If circles are detected, draw them on the frame (only inside the rectangle)
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")
         for (x, y, r) in circles:
-            # Check if the circle's center (x, y) is inside the rectangular region
-            if cv2.pointPolygonTest(points, (x, y), False) >= 0:  # Point inside the polygon
+            # Explicitly cast x and y to float for pointPolygonTest
+            if cv2.pointPolygonTest(points, (float(x), float(y)), False) >= 0:
                 # Draw the outer circle
                 cv2.circle(frame, (x, y), r, (0, 255, 0), 4)
                 # Draw the center of the circle
@@ -44,20 +45,25 @@ def detect_yellow_circle(frame
 
     return frame
 
-# Load the image from file
-# image_path = 'Data/droidcam-20241022-211204.jpg'  # Replace with your image path
-# image = cv2.imread(image_path)
+if __name__ == '__main':
+    # Load the image from file
+    images = [
+        {'image_path': 'Data/droidcam-20241022-211211.jpg',
+            'corners': [[82, 37], [85, 424], [586, 434], [598,  38]]},
+        {'image_path': 'Data/droidcam-20241022-211204.jpg', 'corners': [[82, 38], [85, 424], [588, 431], [596, 38]]}]
+    image=images[0]
+    image_frame = cv2.imread(image['image_path'])
 
-# # Check if image is loaded properly
-# if image is None:
-#     print("Error: Could not open or find the image.")
-# else:
-#     # Detect yellow circles in the image
-#     output_image = detect_yellow_circle(image)
+    # # Check if image is loaded properly
+    if image is None:
+        print("Error: Could not open or find the image.")
+    else:
+        # Detect yellow circles in the image
+        output_image = detect_yellow_circle(image_frame,image['corners'])
 
-#     # Display the image with detected circles
-#     cv2.imshow("Yellow Circle Detection", output_image)
+        # Display the image with detected circles
+        cv2.imshow("Yellow Circle Detection", output_image)
 
-#     # Wait for a key press and close the window
-#     cv2.waitKey(0)
-#     cv2.destroyAllWindows()
+        # Wait for a key press and close the window
+        cv2.waitKey(0)
+    #     cv2.destroyAllWindows()
