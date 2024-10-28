@@ -11,9 +11,12 @@ def detect_yellow_circle(frame
 
     # Threshold the HSV image to get only yellow colors
     mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-
+    # kernel = np.ones((5, 5), np.uint8) 
+    # erode = cv2.erode(mask,kernel)
+    # dilate = cv2.dilate(erode,kernel)
     # Perform a bitwise AND to keep only the yellow parts of the image
     result = cv2.bitwise_and(frame, frame, mask=mask)
+    # return result
 
     # Create a mask with the rectangular region defined by the four corners
     rect_mask = np.zeros(frame.shape[:2], dtype=np.uint8)
@@ -45,7 +48,7 @@ def detect_yellow_circle(frame
 
     return frame
 
-if __name__ == '__main':
+if __name__ == '__main__':
     # Load the image from file
     images = [
         {'image_path': 'Data/droidcam-20241022-211211.jpg',

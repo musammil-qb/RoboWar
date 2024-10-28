@@ -19,6 +19,7 @@ for image_path in image_paths:
     image = detect_yellow_circle(image,corners)
 
     image = draw_field(image, green_field,corners)
+    cv2.namedWindow("Green Field"+image_path,cv2.WINDOW_NORMAL)
     cv2.imshow("Green Field"+image_path, image)
 
     end_time = time()
