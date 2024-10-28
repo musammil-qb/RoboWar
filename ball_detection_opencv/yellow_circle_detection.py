@@ -5,7 +5,7 @@ lower_yellow = np.array([22, 150, 140])
 upper_yellow = np.array([33, 255, 255])
 # Function to detect yellow circles in a frame or image
 def detect_yellow_circle(frame
-                         , corners):
+                         ,  corners, lower_yellow, upper_yellow):
     # Convert the image to HSV (hue, saturation, value) color space
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
