@@ -12,7 +12,7 @@ classNames = ["ball", "bot" ,"arena"]
 
 while True:
     success, img = cap.read()
-    results = model(img, stream=True)
+    results = model.predict(img)
 
     for r in results:
         boxes = r.boxes
