@@ -3,6 +3,13 @@ import numpy as np
 import sys
 
 from aruco.arucodetect import detectarucomarker
+from yolo.findall import findall
+import math
+
+def getnearestball(balls, bot_pos):
+    # Calculate the distance of each point in 'points' to the reference point
+    closest = min(balls, key=lambda ball: math.sqrt((ball[0] - bot_pos[0])**2 + (ball[1] - bot_pos[1])**2))
+    return closest
 
 def calculate_angle(p1, p2):
     # Convert points to numpy arrays if they aren't already
@@ -20,6 +27,24 @@ def calculate_angle(p1, p2):
 def process_frame(frame):
     corners = detectarucomarker(frame)
     bot_corners = corners[69]
+    post_corners = corners[92]
+    x_total_bot = 0
+    y_total_bot = 0
+    x_total_post = 0
+    y_total_post = 0
+
+    for i in range(4):
+        x_total_bot += bot_corners[i][0]
+        y_total_bot += bot_corners[i][1]
+        x_total_post += post_corners[i][0]
+        y_total_post += post_corners[i][1]
+
+    
+    bot_mid_point = (int(x_total_bot/4), int(y_total_bot/4))
+    post_mid_point = (int(x_total_post/4), int(y_total_post/4))
+
+    findvirtualpoint(frame, bot_mid_point, post_mid_point)
+
     for i in range(4):
         p1 = bot_corners[i]
         p2 = bot_corners[(i + 1) % 4]
@@ -59,6 +84,24 @@ def process_frame(frame):
             print(angle)
 
     return frame
+
+def findvirtualpoint(frame, bot_pos, post_pos):
+    balls, _, _ = findall(frame)
+
+    extension_factor=0.2
+
+    closest_ball = getnearestball(balls, bot_pos)
+    print(closest_ball, post_pos)
+    dx = closest_ball[0] - post_pos[0]
+    dy = closest_ball[1] - post_pos[1]
+
+    x_extended = closest_ball[0] + extension_factor * dx
+    y_extended = closest_ball[1] + extension_factor * dy
+
+    cv2.line(frame, (int(x_extended),int(y_extended)), post_pos, (0,255,0), 2)
+
+    return x_extended, y_extended
+
 
 if __name__ == "__main__":
     image_path =  sys.argv[1]   
