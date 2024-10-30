@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import sys
 
-from aruco.arucodetect import detectarucomarker
-from yolo.findall import findall
+from utils.aruco.arucodetect import detectarucomarker
+from utils.yolo.findall import findall
 import math
 
 def getnearestball(balls, bot_pos):
