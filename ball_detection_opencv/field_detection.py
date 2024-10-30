@@ -6,7 +6,7 @@ lower_green = np.array([50, 0, 44])
 upper_green = np.array([83, 220, 227])
 
 # Function to detect the largest greenish rectangle and find its corners
-def detect_field(frame,lower_green, upper_green):
+def detect_field(frame,lower_green=lower_green, upper_green=upper_green):
     # Convert the image to HSV color space
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 

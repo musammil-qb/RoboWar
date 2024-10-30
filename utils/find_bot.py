@@ -4,6 +4,12 @@ import sys
 
 from aruco.arucodetect import detectarucomarker
 
+def find_distance(p1,p2):
+    x1,y1 = p1
+    x2,y2 = p2
+    dist = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+    return dist
+
 def calculate_angle(p1, p2):
     # Convert points to numpy arrays if they aren't already
     point1 = np.array(p1, dtype=np.float32)
@@ -16,6 +22,13 @@ def calculate_angle(p1, p2):
     angle_degrees = np.degrees(angle_radians)
     
     return angle_degrees
+
+def find_bot(bot_corners):
+    bot_corners = np.array(bot_corners)
+    mid_point = (bot_corners[0]+bot_corners[1])/2
+    bot_center_point = (bot_corners[0]+bot_corners[1]+bot_corners[2]+bot_corners[3])/4
+    bot_angle = calculate_angle(bot_center_point, mid_point)
+    return bot_angle, bot_center_point
 
 def process_frame(frame):
     corners = detectarucomarker(frame)
