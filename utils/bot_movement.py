@@ -9,15 +9,15 @@ destination_point = (790, 116)
 def move_bot(angle=None,distance=None):
     pass
 
-def bot_movement(bot_corners,destinatoin_point=destination_point):
+def bot_movement(bot_corners,destination_point=destination_point):
     bot_angle, bot_center = find_bot(bot_corners)
-    destination_point_angle = calculate_angle(bot_center, destinatoin_point)
+    destination_point_angle = calculate_angle(bot_center, destination_point)
     angle_difference = destination_point_angle - bot_angle
     # move_bot(angle =angle_difference)
-    distance = find_distance(bot_center, destinatoin_point)
+    distance = find_distance(bot_center, destination_point)
     # move_bot(distance = distance)
     print(bot_angle, destination_point_angle, angle_difference, distance) 
-    print(bot_center, destinatoin_point)
+    print(bot_center, destination_point)
 
 def main(frame):
     corners = detectarucomarker(frame)
