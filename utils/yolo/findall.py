@@ -5,6 +5,8 @@ model = YOLO("yolo/best.pt")
 def findall(frame):
     result = model.predict(frame, conf=0.5)
     balls = []
+    bot = None
+    arena = None
 
     for r in result:
         boxes = r.boxes
@@ -30,4 +32,4 @@ def findall(frame):
                 x1, y1, x2, y2 = box.xyxy[0]
                 arena = [int(i) for i in [x1, y1, x2, y2]]
 
-    return balls, None, arena
+    return balls, bot, arena
