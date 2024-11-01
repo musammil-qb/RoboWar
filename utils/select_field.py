@@ -14,8 +14,11 @@ def select_corners(event, x, y, flags, param):
         if len(corners) < 4:  # Limit to 4 corners
             corners.append((x, y))
             print(f"Corner {len(corners)}: ({x}, {y})")
-            if len(corners) == 4:  # Draw rectangle after selecting 4 corners
-                cv2.destroyWindow("Select Rectangle")
+            
+            # Save corners to file once four corners are selected
+            if len(corners) == 4:
+                save_corners_to_file(corners)
+                print("Corners saved to field_corners.py")
 
 # Function to draw the rectangle based on selected corners
 def draw_rectangle(frame, corners):
@@ -27,6 +30,14 @@ def trace_mouse(frame, mouse_position):
     if mouse_position is not None:
         # Draw a circle at the mouse position
         cv2.circle(frame, mouse_position, 5, (255, 0, 0), -1)
+
+# Function to save corners to a Python file
+def save_corners_to_file(corners):
+    with open("field_corners.py", "w") as file:
+        file.write(f"corner1 = {corners[0]}\n")
+        file.write(f"corner2 = {corners[1]}\n")
+        file.write(f"corner3 = {corners[2]}\n")
+        file.write(f"corner4 = {corners[3]}\n")
 
 # Main function to capture video and select rectangle
 def main():
@@ -64,3 +75,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
