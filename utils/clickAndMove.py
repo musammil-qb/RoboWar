@@ -51,6 +51,8 @@ def move_bot_to_target(bot_position, bot_angle, target_point):
     # Display the movement steps
     print(f"Rotation needed: {rotation_needed:.2f} degrees ({rotation_direction}), Time: {rotation_time_ms:.2f} ms")
     print(f"Move {travel_direction} to target, Distance: {distance_to_target:.2f} pixels, Time: {travel_time_ms:.2f} ms")
+    return rotation_time_ms,rotation_direction,rotation_time_ms,travel_direction,travel_time_ms
+
 
 # Mouse callback function to select the target point
 def select_target(event, x, y, flags, param):
