@@ -1,8 +1,12 @@
 import cv2
 import time
+import sys
 import threading
+
+import numpy as np 
 from ultralytics import YOLO
 
+from util import calculate_angle_to_point
 
 
 class Detection:
@@ -24,15 +28,56 @@ class Detection:
     def process_frame(self, frame):
         pass
 
-    def detect_arucode(self, frame):
-        pass
 
     def detect_yolo(self, frame):
         pass
 
+    def detect_aruco(self):
+        frame = self.video_stream.read()
+        markers_dict_np, markers_dict_integer = self.detect_aruco_markers(frame)
+        bot_angle, bot_center_point = self.find_bot(markers_dict_integer[69]) if markers_dict_integer.get(69) else (None,None)
+        return bot_angle, bot_center_point
+
+
     def destroy(self):
         self.video_stream.stop()
         self.destroy()
+
+    def detect_aruco_markers(self,frame, draw_corners=False):
+        aruco_type = cv2.aruco.DICT_4X4_100
+        dictionary = cv2.aruco.getPredefinedDictionary(aruco_type)
+        parameters = cv2.aruco.DetectorParameters()
+        detector = cv2.aruco.ArucoDetector(dictionary, parameters)
+        
+        markers_dict_np = {}
+        markers_dict_integer = {}
+
+        try:
+            corners, ids, rejected = detector.detectMarkers(frame)
+
+            if draw_corners:
+                cv2.aruco.drawDetectedMarkers(frame, corners, ids)
+
+            if ids is not None:
+                for i, marker_id in enumerate(ids.flatten()):
+                    processed_corners = corners[i][0]
+                    markers_dict_np[marker_id] = processed_corners
+                    processed_corners = [corner.tolist() for corner in corners[i][0]]
+                    markers_dict_integer[marker_id] = processed_corners
+
+            return markers_dict_np, markers_dict_integer
+
+        except Exception as e:
+            print(f"Error detecting markers: {e}")
+            return {}, {}
+
+    def find_bot(self, bot_corners):
+        bot_corners = np.array(bot_corners)
+        mid_point = (bot_corners[0]+bot_corners[1])/2
+        bot_center_point = (bot_corners[0]+bot_corners[1]+bot_corners[2]+bot_corners[3])/4
+        bot_angle = calculate_angle_to_point(bot_center_point, mid_point)        
+        return bot_angle, bot_center_point
+
 
 class VideoStream:
     def __init__(self, url):
@@ -68,4 +113,3 @@ class VideoStream:
         self.stopped = True
         self.thread.join()
         self.cap.release()
-
