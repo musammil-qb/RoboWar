@@ -20,16 +20,16 @@ class Bot:
         self.position = position
         self.angle = angle
 
-    def move(self, movement, interval):
+    def makeMovement(self, movement, interval):
         res = requests.get(f"http://{self.bot_ip}/{movement}", params={"delay": interval})
         print(res.status_code)
 
-    def makeCommand(self, x, y):
+    def move(self, x, y):
         rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement(self.position, self.angle, (x, y))
-        self.move(rotation_direction, rotation_time_ms)
-        self.move(travel_direction, travel_time_ms)
+        self.makeMovement(rotation_direction, rotation_time_ms)
+        self.makeMovement(travel_direction, travel_time_ms)
 
-    def calculateMovement(bot_position, bot_angle, target_point):
+    def calculateMovement(self,bot_position, bot_angle, target_point):
         # Calculate distance and angle to target
         distance_to_target = calculate_distance(bot_position, target_point)
         angle_to_target = calculate_angle_to_point(bot_position, target_point)
@@ -42,12 +42,15 @@ class Bot:
         elif rotation_needed > 90 and rotation_needed < 180:
             rotation_direction = "Left"
             travel_direction = "Backward"
+            rotation_needed = 180 - rotation_needed
         elif rotation_needed > 180 and rotation_needed < 270:
             rotation_direction = "Right"
             travel_direction = "Backward"
+            rotation_needed = rotation_needed - 180
         else:
             rotation_direction = "Left"
             travel_direction = "Forward"
+            rotation_needed = 360 - rotation_needed
 
         # Calculate rotation and travel time
         rotation_time_ms = abs(rotation_needed) * ROTATION_TIME_PER_DEGREE
