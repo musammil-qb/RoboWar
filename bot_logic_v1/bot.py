@@ -1,6 +1,7 @@
 import requests
 from util import *
 from const import *
+from calliberate import calliberate
 
 class Bot:
     def __init__(self, position, angle):
@@ -10,17 +11,13 @@ class Bot:
         self.angle = angle
         self.direction = 'stop'
         self.speed = None
+        self.rate_of_movement = calliberate()
         self.command = {
             'direction' : None,
             'interval': None, 
             'time_of_command': None
         }
         self.setSpeed(8)
-        # bot calibration
-
-        FRONT_TRAVEL_PIXELS_PER_MS = 393 / 1000  # pixels per ms for forward movement
-        BACK_TRAVEL_PIXELS_PER_MS = 386 / 1000   # pixels per ms for backward movement
-        ROTATION_TIME_PER_DEGREE = 203 / 90      # ms per degree rotation
 
 
     def updatePosition(self, position, angle):
@@ -66,23 +63,14 @@ class Bot:
             rotation_needed = 360 - rotation_needed
 
         # Calculate rotation and travel time
-        rotation_time_ms = abs(rotation_needed) * ROTATION_TIME_PER_DEGREE
-        travel_time_ms = distance_to_target / FRONT_TRAVEL_PIXELS_PER_MS if travel_direction == "forward" else distance_to_target / BACK_TRAVEL_PIXELS_PER_MS
+        rotation_time_ms = abs(rotation_needed) * self.rate_of_movement['right'] if rotation_direction == "right" else abs(rotation_needed) * self.rate_of_movement['left']
+        travel_time_ms = distance_to_target / self.rate_of_movement['forward'] if travel_direction == "forward" else distance_to_target / self.rate_of_movement['backward']
         
         # Display the movement steps
         print(f"Rotation needed: {rotation_needed:.2f} degrees ({rotation_direction}), Time: {rotation_time_ms:.2f} ms")
         print(f"Move {travel_direction} to target, Distance: {distance_to_target:.2f} pixels, Time: {travel_time_ms:.2f} ms")
 
         return rotation_time_ms, rotation_direction, travel_direction, travel_time_ms
-
-    def botCalibration(self):
-        bot_angle, bot_center_point= (0,0),0
-        self.makeMovement('forward', 500)
-        bot_angle_2, bot_center_point_2= (0,0),0
-        angle_diffrence_forward_half_second = bot_angle - bot_angle_2
-        distance_traveled_forward_half_second = calculate_distance(bot_center_point, bot_center_point_2)
-        self.makeMovement('backward', 500)
-
 
 
 if __name__ == '__main__':
