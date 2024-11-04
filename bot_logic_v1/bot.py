@@ -9,12 +9,19 @@ class Bot:
         self.position = position #bot center point
         self.angle = angle
         self.direction = 'stop'
-        self.speed = 8
+        self.speed = None
         self.command = {
             'direction' : None,
             'interval': None, 
             'time_of_command': None
         }
+        self.setSpeed(8)
+        # bot calibration
+
+        FRONT_TRAVEL_PIXELS_PER_MS = 393 / 1000  # pixels per ms for forward movement
+        BACK_TRAVEL_PIXELS_PER_MS = 386 / 1000   # pixels per ms for backward movement
+        ROTATION_TIME_PER_DEGREE = 203 / 90      # ms per degree rotation
+
 
     def updatePosition(self, position, angle):
         self.position = position
@@ -23,11 +30,15 @@ class Bot:
     def makeMovement(self, movement, interval):
         res = requests.get(f"http://{self.bot_ip}/{movement}", params={"delay": interval})
         print(res.status_code)
+    
+    def setSpeed(self, speed):
+        self.speed = speed
+        res = requests.get(f"http://{self.bot_ip}/speed", params={"speed": speed})
+        print(res.status_code)
 
     def move(self, target_point):
         x, y = target_point
         rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement(self.position, self.angle, (x, y))
-        print(rotation_time_ms, rotation_direction, travel_direction, travel_time_ms)
         self.makeMovement(rotation_direction, rotation_time_ms)
         self.makeMovement(travel_direction, travel_time_ms)
 
@@ -63,6 +74,14 @@ class Bot:
         print(f"Move {travel_direction} to target, Distance: {distance_to_target:.2f} pixels, Time: {travel_time_ms:.2f} ms")
 
         return rotation_time_ms, rotation_direction, travel_direction, travel_time_ms
+
+    def botCalibration(self):
+        bot_angle, bot_center_point= (0,0),0
+        self.makeMovement('forward', 500)
+        bot_angle_2, bot_center_point_2= (0,0),0
+        angle_diffrence_forward_half_second = bot_angle - bot_angle_2
+        distance_traveled_forward_half_second = calculate_distance(bot_center_point, bot_center_point_2)
+        self.makeMovement('backward', 500)
 
 
 

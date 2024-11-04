@@ -11,7 +11,7 @@ def main():
     # Wait for initial bot detection
     print("Waiting for initial bot detection...")
     while True:
-        bot_angle, bot_center_point, _ = detection.detect_aruco()
+        bot_angle, bot_center_point, _, _ = detection.detect_aruco()
         if bot_angle is not None:
             print(f"Bot angle:{bot_angle}, bot center point: {bot_center_point}")
             break
