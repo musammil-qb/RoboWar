@@ -1,7 +1,7 @@
 import requests
 from util import *
 from const import *
-
+import os, json
 
 class Bot:
     def __init__(self, position, angle,detection):
@@ -20,15 +20,20 @@ class Bot:
         self.setSpeed(4)
 
     def calliberate(self,detection):
-        return {'forward': FRONT_TRAVEL_PIXELS_PER_MS, 'backward': BACK_TRAVEL_PIXELS_PER_MS, 
-                'left': ROTATION_TIME_PER_DEGREE,
-                'right': ROTATION_TIME_PER_DEGREE,
-                }
+        calibrate_file = "calibrated_speed.json"
         caliberation_speed = {}
-        caliberation_speed['forward'] = self.caliberateMovement('forward', 500,detection)
-        caliberation_speed['backward'] = self.caliberateMovement('backward', 500,detection)
-        caliberation_speed['right'] = self.caliberateMovement('right', 100,detection)
-        caliberation_speed['left'] = self.caliberateMovement('left', 100,detection)
+        if not os.path.exists(calibrate_file):
+
+            caliberation_speed['forward'] = self.caliberateMovement('forward', 500, detection)
+            caliberation_speed['backward'] = self.caliberateMovement('backward', 500, detection)
+            caliberation_speed['right'] = self.caliberateMovement('right', 100, detection)
+            caliberation_speed['left'] = self.caliberateMovement('left', 100, detection)
+            
+            with open(calibrate_file, "w") as calibrationfile:
+                json.dump(caliberation_speed, calibrationfile)
+        else:
+            with open(calibrate_file, "r") as calibrationfile:
+                caliberation_speed = json.load(calibrationfile)
 
         return caliberation_speed
 
