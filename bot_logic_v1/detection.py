@@ -11,9 +11,9 @@ from const import BOT_ID, POST_ID
 
 class Detection:
     def __init__(self):
-        # select corners
+        #TODO select field
         self.model = YOLO("model.pt")
-
+        self.detection_object = None
         # start video stream
         cam_ip = "10.42.0.66"  #TODO ip from input
 
@@ -25,19 +25,57 @@ class Detection:
                 break
         print("Video stream started!")
 
-    def process_frame(self, frame):
-        pass
+    def process_frame(self):
+        frame = self.video_stream.read()
+        balls, bots, arena = self.detect_yolo(frame)
+        bot_angle, bot_center_point, goal_center_point, other_aruco_codes = self.detect_aruco()
+        detection_object = {'yolo' :{'balls': balls, 'bots': bots, 'arena': arena},'aruco': {'bot_angle': bot_angle,
+                            'bot_center_point': bot_center_point, 'goal_center_point': goal_center_point,
+                            'other_aruco codes': other_aruco_codes}}
+        self.detection_object = detection_object
+        return detection_object
 
 
     def detect_yolo(self, frame):
-        pass
+        model = self.model
+        result = model.predict(frame, conf=0.5)
+        balls = []
+        bot = None
+        arena = None
+
+        for r in result:
+            boxes = r.boxes
+
+            for box in boxes:
+                if int(box.cls[0]) == 0: # Detect balls
+                    x1, y1, x2, y2 = box.xyxy[0]
+                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+
+                    center_point_ball = (int((x1+x2)/2), int((y1+y2)/2))
+
+                    balls.append(center_point_ball)
+
+                if int(box.cls[0]) == 1: # Detect bot
+                    x1, y1, x2, y2 = box.xyxy[0]
+                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+
+                    center_point_bot = (int((x1+x2)/2), int((y1+y2)/2))
+
+                    bot = center_point_bot
+
+                if int(box.cls[0]) == 2: # Detect arena
+                    x1, y1, x2, y2 = box.xyxy[0]
+                    arena = [int(i) for i in [x1, y1, x2, y2]]
+
+        return balls, bot, arena
+
 
     def detect_aruco(self):
         frame = self.video_stream.read()
         markers_dict_np, markers_dict_integer = self.detect_aruco_markers(frame)
-        bot_angle, bot_center_point = self.find_bot(markers_dict_integer[BOT_ID]) if markers_dict_integer.get(BOT_ID) else (None,None)
-        goal_angle, goal_center_point = self.find_bot(markers_dict_integer[POST_ID]) if markers_dict_integer.get(POST_ID) else (None,None)
-        return bot_angle, bot_center_point, goal_center_point 
+        bot_angle, bot_center_point = self.find_bot(markers_dict_integer.pop(BOT_ID)) if markers_dict_integer.get(BOT_ID) else (None,None)
+        _, goal_center_point = self.find_bot(markers_dict_integer.pop(POST_ID)) if markers_dict_integer.get(POST_ID) else (None,None)
+        return bot_angle, bot_center_point, goal_center_point, markers_dict_integer
 
 
     def destroy(self):
@@ -109,7 +147,6 @@ class VideoStream:
 
     def read(self):
         return self.latest_frame
-
     def stop(self):
         self.stopped = True
         self.thread.join()
