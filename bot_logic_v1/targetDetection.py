@@ -3,8 +3,8 @@ import cv2
 import math
 from detection import Detection
 
-extension_factor_before = 0.1  # Percentage for point before the ball
-extension_factor_after = 0.15 
+extension_factor_before = 0.2  # Percentage for point before the ball
+extension_factor_after = 0.1
 
 def filter_balls(trimmed_field,balls, goal_center_point,buffer_distance=20):
     filtered_balls = []

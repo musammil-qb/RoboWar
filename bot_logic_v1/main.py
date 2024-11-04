@@ -5,6 +5,7 @@ from detection import Detection
 from bot import Bot
 from algorithm import algorithm
 from util import draw_rectangle
+from const import BLUE, GREEN
 
 
 def main():
@@ -29,11 +30,27 @@ def main():
         #     image = detection.video_stream.read()
 
         #     cv2.imshow('Feed', image)
-        #     draw_rectangle(image, detection.field_corners)
         #     pressed_key = cv2.waitKey(1)
         #     if pressed_key == ord('q'):
         #         print("Exiting...")
         #         break
+        #     elif pressed_key == ord('i'):
+        #         bot_angle, bot_center_point, _, _ = detection.detect_aruco()
+        #         print("initial point")
+        #         print(f"Bot angle:{bot_angle}, bot center point: {bot_center_point}")
+        #         movement = input("movement: ")
+        #         interval = input("interval: ")
+        #         print("final point")
+        #         bot.makeMovement(movement, interval)
+        #         time.sleep(1)
+        #         bot_angle_2, bot_center_point_2, _, _ = detection.detect_aruco()
+        #         print(f"Bot angle:{bot_angle_2}, bot center point: {bot_center_point_2}")
+        #     elif pressed_key == ord('d'):
+        #         bot_angle_2, bot_center_point_2, _, _ = detection.detect_aruco()
+        #         # print("initial point")
+        #         print(f"Bot angle:{bot_angle_2}, bot center point: {bot_center_point_2}")
+
+
         #     time.sleep(0.01)
 
     except KeyboardInterrupt:

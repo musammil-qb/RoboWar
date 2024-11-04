@@ -1,7 +1,9 @@
+import os, json
+import time
 import requests
+
 from util import *
 from const import *
-import os, json
 
 class Bot:
     def __init__(self, position, angle,detection):
@@ -11,23 +13,23 @@ class Bot:
         self.angle = angle
         self.direction = 'stop'
         self.speed = None
+        self.setSpeed(6)
         self.rate_of_movement = self.calliberate(detection)
         self.command = {
             'direction' : None,
             'interval': None, 
             'time_of_command': None
         }
-        self.setSpeed(4)
 
-    def calliberate(self,detection):
+    def calliberate(self, detection):
         calibrate_file = "calibrated_speed.json"
         caliberation_speed = {}
+        
         if not os.path.exists(calibrate_file):
-
             caliberation_speed['forward'] = self.caliberateMovement('forward', 500, detection)
             caliberation_speed['backward'] = self.caliberateMovement('backward', 500, detection)
-            caliberation_speed['right'] = self.caliberateMovement('right', 100, detection)
-            caliberation_speed['left'] = self.caliberateMovement('left', 100, detection)
+            caliberation_speed['right'] = self.caliberateMovement('right', 200, detection)
+            caliberation_speed['left'] = self.caliberateMovement('left', 200, detection)
             
             with open(calibrate_file, "w") as calibrationfile:
                 json.dump(caliberation_speed, calibrationfile)
@@ -37,24 +39,38 @@ class Bot:
 
         return caliberation_speed
 
-    def caliberateMovement(self, direction, interval,detection):
-        if direction == 'forward' or direction == 'backward':
-            initial_position = self.getPositionAndAngle(detection)[0]
+
+    def caliberateMovement(self, direction, interval, detection):
+        if direction in ['forward', 'backward']:
+            initial_position, _ = self.getPositionAndAngle(detection)
+
             self.makeMovement(direction, interval)
-            final_position = self.getPositionAndAngle(detection)[0]
-            return calculate_distance(initial_position, final_position) / interval
+            time.sleep(3)
+
+            final_position, _ = self.getPositionAndAngle(detection)
+
+            # Calculate distance traveled per millisecond
+            distance_traveled = calculate_distance(initial_position, final_position)
+            
+            return distance_traveled / interval if distance_traveled > 0 else 0
+
         else:
-            initial_angle = self.getPositionAndAngle(detection)[1]
+            _, initial_angle = self.getPositionAndAngle(detection)
+
             self.makeMovement(direction, interval)
-            final_angle = self.getPositionAndAngle(detection)[1]
-            return calculate_angle_to_point(initial_angle, final_angle) / interval
+            time.sleep(3)
+
+            _ ,final_angle = self.getPositionAndAngle(detection)
+
+            # Calculate angle change per millisecond
+            angle_traveled = abs(final_angle - initial_angle)
+            return angle_traveled / interval if angle_traveled > 0 else 0
+
 
 
     def getPositionAndAngle(self,detection):
-        
-        detection_object = detection.process_frame()
-        return detection_object['aruco']['bot_center_point'], detection_object['aruco']['bot_angle']
-
+        bot_angle, bot_center_point, goal_center_point, other_aruco_codes = detection.detect_aruco()
+        return bot_center_point, bot_angle
 
 
     def updatePosition(self, position, angle):
@@ -63,7 +79,8 @@ class Bot:
 
     def makeMovement(self, movement, interval):
         res = requests.get(f"http://{self.bot_ip}/{movement}", params={"delay": interval})
-        print(res.status_code)
+        if res.status_code ==200:
+            print(f"moved {movement} time:{interval}")
     
     def setSpeed(self, speed):
         self.speed = speed
@@ -74,6 +91,7 @@ class Bot:
         x, y = target_point
         rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement((x, y))
         self.makeMovement(rotation_direction, rotation_time_ms)
+        time.sleep(rotation_time_ms/1000)
         self.makeMovement(travel_direction, travel_time_ms)
 
     def calculateMovement(self, target_point):
@@ -101,7 +119,7 @@ class Bot:
             rotation_needed = 360 - rotation_needed
 
         # Calculate rotation and travel time
-        rotation_time_ms = abs(rotation_needed) * self.rate_of_movement['right'] if rotation_direction == "right" else abs(rotation_needed) * self.rate_of_movement['left']
+        rotation_time_ms = abs(rotation_needed) / self.rate_of_movement['right'] if rotation_direction == "right" else abs(rotation_needed) / self.rate_of_movement['left']
         travel_time_ms = distance_to_target / self.rate_of_movement['forward'] if travel_direction == "forward" else distance_to_target / self.rate_of_movement['backward']
         
         # Display the movement steps

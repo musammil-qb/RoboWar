@@ -2,6 +2,8 @@ import cv2
 import time
 import sys
 import threading
+import os
+import json
 
 import numpy as np 
 from ultralytics import YOLO
@@ -127,26 +129,34 @@ class Detection:
         return bot_angle, bot_center_point
 
     def select_field(self):
-        cv2.namedWindow("Feed")
-        cv2.setMouseCallback("Feed", self.select_corners)
+        file_path = 'corners.json'
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                self.field_corners = json.load(f)
+                
+        else:
+            cv2.namedWindow("Feed")
+            cv2.setMouseCallback("Feed", self.select_corners)
 
-        while True:
-            frame = self.video_stream.read()
-            # Trace mouse movement
+            while True:
+                frame = self.video_stream.read()
+                # Trace mouse movement
 
-            # Display the video frame
-            cv2.imshow("Feed", frame)
+                # Display the video frame
+                cv2.imshow("Feed", frame)
 
-            # Break the loop on 'q' key press
-            if len(self.field_corners) == 4:
-                print(self.field_corners)
-                break
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-            time.sleep(1)
+                # Break the loop on 'q' key press
+                if len(self.field_corners) == 4:
+                    with open(file_path, 'w') as f:
+                        json.dump(self.field_corners, f)
+                    break
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                time.sleep(0.5)
+
 
         # Release the video capture and close all windows
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
 
     def select_corners(self,event, x, y, flags, param):        
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -154,7 +164,7 @@ class Detection:
 
     def define_trimmed_field(self):
         field_corners = self.field_corners
-        trim_factor = 1/8
+        trim_factor = 0.06
         trim_length = calculate_distance(field_corners[0], field_corners[1])*trim_factor
         
         p1, p2, p3, p4 = np.array(field_corners)
