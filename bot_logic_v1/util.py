@@ -13,6 +13,6 @@ def calculate_angle_to_point(bot_position, target_position):
     angle_to_target = math.degrees(math.atan2(dy, dx)) % 360
     return angle_to_target
 
-def draw_rectangle(frame, corners):
+def draw_rectangle(frame, corners,color=(0, 255, 0),):
     if len(corners) == 4:
-        cv2.polylines(frame, [np.array(corners)], isClosed=True, color=(0, 255, 0), thickness=2)
+        cv2.polylines(frame, [np.array(corners)], isClosed=True, color=color, thickness=2)

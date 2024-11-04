@@ -4,6 +4,7 @@ import cv2
 from detection import Detection
 from bot import Bot
 from algorithm import algorithm
+from util import draw_rectangle
 
 
 def main():
@@ -16,7 +17,7 @@ def main():
             print(f"Bot angle:{bot_angle}, bot center point: {bot_center_point}")
             break
         time.sleep(0.5)
-    bot = Bot(bot_center_point, bot_angle)
+    bot = Bot(bot_center_point, bot_angle,detection)
 
     print("Initializing completed!")
 
@@ -24,6 +25,17 @@ def main():
     try:
         # Start Algorithm
         algorithm(detection, bot)
+        # while True:
+        #     image = detection.video_stream.read()
+
+        #     cv2.imshow('Feed', image)
+        #     draw_rectangle(image, detection.field_corners)
+        #     pressed_key = cv2.waitKey(1)
+        #     if pressed_key == ord('q'):
+        #         print("Exiting...")
+        #         break
+        #     time.sleep(0.01)
+
     except KeyboardInterrupt:
         detection.destroy()
         print("Exiting...")

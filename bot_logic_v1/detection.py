@@ -6,11 +6,12 @@ import threading
 import numpy as np 
 from ultralytics import YOLO
 
-from util import calculate_angle_to_point
+from util import calculate_angle_to_point,calculate_distance
 from const import BOT_ID, POST_ID, BLUE
 
 class Detection:
     def __init__(self):
+        print("Initializing detection...")
         self.model = YOLO("model.pt")
         self.detection_object = None
         # start video stream
@@ -28,6 +29,8 @@ class Detection:
         #TODO select field
         self.field_corners = []
         self.select_field()
+        self.define_trimmed_field()
+        print("Detection initialized!")
 
 
     def process_frame(self):
@@ -124,15 +127,15 @@ class Detection:
         return bot_angle, bot_center_point
 
     def select_field(self):
-        cv2.namedWindow("Select Rectangle")
-        cv2.setMouseCallback("Select Rectangle", self.select_corners)
+        cv2.namedWindow("Feed")
+        cv2.setMouseCallback("Feed", self.select_corners)
 
         while True:
             frame = self.video_stream.read()
             # Trace mouse movement
 
             # Display the video frame
-            cv2.imshow("Select Rectangle", frame)
+            cv2.imshow("Feed", frame)
 
             # Break the loop on 'q' key press
             if len(self.field_corners) == 4:
@@ -148,6 +151,20 @@ class Detection:
     def select_corners(self,event, x, y, flags, param):        
         if event == cv2.EVENT_LBUTTONDOWN:
             self.field_corners.append((x, y))
+
+    def define_trimmed_field(self):
+        field_corners = self.field_corners
+        trim_factor = 1/8
+        trim_length = calculate_distance(field_corners[0], field_corners[1])*trim_factor
+        
+        p1, p2, p3, p4 = np.array(field_corners)
+        trimmed_field = [
+            (int(p1[0] + trim_length), int(p1[1] + trim_length)),
+            (int(p2[0] - trim_length), int(p2[1] + trim_length)),
+            (int(p3[0] - trim_length), int(p3[1] - trim_length)),
+            (int(p4[0] + trim_length), int(p4[1] - trim_length))
+        ]
+        self.trimmed_field = trimmed_field
 
 class VideoStream:
     def __init__(self, url):

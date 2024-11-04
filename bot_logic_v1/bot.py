@@ -1,23 +1,55 @@
 import requests
 from util import *
 from const import *
-from calliberate import calliberate
+
 
 class Bot:
-    def __init__(self, position, angle):
+    def __init__(self, position, angle,detection):
         #to do
         self.bot_ip = '10.42.0.202'
         self.position = position #bot center point
         self.angle = angle
         self.direction = 'stop'
         self.speed = None
-        self.rate_of_movement = calliberate()
+        self.rate_of_movement = self.calliberate(detection)
         self.command = {
             'direction' : None,
             'interval': None, 
             'time_of_command': None
         }
-        self.setSpeed(8)
+        self.setSpeed(4)
+
+    def calliberate(self,detection):
+        return {'forward': FRONT_TRAVEL_PIXELS_PER_MS, 'backward': BACK_TRAVEL_PIXELS_PER_MS, 
+                'left': ROTATION_TIME_PER_DEGREE,
+                'right': ROTATION_TIME_PER_DEGREE,
+                }
+        caliberation_speed = {}
+        caliberation_speed['forward'] = self.caliberateMovement('forward', 500,detection)
+        caliberation_speed['backward'] = self.caliberateMovement('backward', 500,detection)
+        caliberation_speed['right'] = self.caliberateMovement('right', 100,detection)
+        caliberation_speed['left'] = self.caliberateMovement('left', 100,detection)
+
+        return caliberation_speed
+
+    def caliberateMovement(self, direction, interval,detection):
+        if direction == 'forward' or direction == 'backward':
+            initial_position = self.getPositionAndAngle(detection)[0]
+            self.makeMovement(direction, interval)
+            final_position = self.getPositionAndAngle(detection)[0]
+            return calculate_distance(initial_position, final_position) / interval
+        else:
+            initial_angle = self.getPositionAndAngle(detection)[1]
+            self.makeMovement(direction, interval)
+            final_angle = self.getPositionAndAngle(detection)[1]
+            return calculate_angle_to_point(initial_angle, final_angle) / interval
+
+
+    def getPositionAndAngle(self,detection):
+        
+        detection_object = detection.process_frame()
+        return detection_object['aruco']['bot_center_point'], detection_object['aruco']['bot_angle']
+
 
 
     def updatePosition(self, position, angle):
@@ -35,11 +67,12 @@ class Bot:
 
     def move(self, target_point):
         x, y = target_point
-        rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement(self.position, self.angle, (x, y))
+        rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement((x, y))
         self.makeMovement(rotation_direction, rotation_time_ms)
         self.makeMovement(travel_direction, travel_time_ms)
 
-    def calculateMovement(self,bot_position, bot_angle, target_point):
+    def calculateMovement(self, target_point):
+        bot_position, bot_angle = self.position, self.angle
         # Calculate distance and angle to target
         distance_to_target = calculate_distance(bot_position, target_point)
         angle_to_target = calculate_angle_to_point(bot_position, target_point)
