@@ -7,7 +7,7 @@ import numpy as np
 from ultralytics import YOLO
 
 from util import calculate_angle_to_point
-
+from const import BOT_ID, POST_ID
 
 class Detection:
     def __init__(self):
@@ -15,7 +15,7 @@ class Detection:
         self.model = YOLO("model.pt")
 
         # start video stream
-        cam_ip = "10.7.110.35"  #TODO ip from input
+        cam_ip = "10.42.0.66"  #TODO ip from input
 
         stream_url = f'http://{cam_ip}:8080/video'
         self.video_stream = VideoStream(stream_url)
@@ -35,8 +35,9 @@ class Detection:
     def detect_aruco(self):
         frame = self.video_stream.read()
         markers_dict_np, markers_dict_integer = self.detect_aruco_markers(frame)
-        bot_angle, bot_center_point = self.find_bot(markers_dict_integer[69]) if markers_dict_integer.get(69) else (None,None)
-        return bot_angle, bot_center_point
+        bot_angle, bot_center_point = self.find_bot(markers_dict_integer[BOT_ID]) if markers_dict_integer.get(BOT_ID) else (None,None)
+        goal_angle, goal_center_point = self.find_bot(markers_dict_integer[POST_ID]) if markers_dict_integer.get(POST_ID) else (None,None)
+        return bot_angle, bot_center_point, goal_center_point 
 
 
     def destroy(self):
@@ -53,7 +54,7 @@ class Detection:
         markers_dict_integer = {}
 
         try:
-            corners, ids, rejected = detector.detectMarkers(frame)
+            corners, ids, _ = detector.detectMarkers(frame)
 
             if draw_corners:
                 cv2.aruco.drawDetectedMarkers(frame, corners, ids)
