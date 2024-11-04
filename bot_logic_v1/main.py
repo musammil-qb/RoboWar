@@ -24,9 +24,6 @@ def main():
     try:
         # Start Algorithm
         algorithm(detection, bot)
-
-
-
     except KeyboardInterrupt:
         detection.destroy()
         print("Exiting...")

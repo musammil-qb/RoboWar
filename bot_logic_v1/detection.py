@@ -7,15 +7,16 @@ import numpy as np
 from ultralytics import YOLO
 
 from util import calculate_angle_to_point
-from const import BOT_ID, POST_ID
+from const import BOT_ID, POST_ID, BLUE
 
 class Detection:
     def __init__(self):
-        #TODO select field
         self.model = YOLO("model.pt")
         self.detection_object = None
         # start video stream
-        cam_ip = "10.42.0.66"  #TODO ip from input
+        cam_ip = input("Enter camera ip: ")
+        if not cam_ip:
+            cam_ip = "10.42.0.66"  #TODO ip from input
 
         stream_url = f'http://{cam_ip}:8080/video'
         self.video_stream = VideoStream(stream_url)
@@ -24,14 +25,19 @@ class Detection:
             if self.video_stream.read() is not None:
                 break
         print("Video stream started!")
+        #TODO select field
+        self.field_corners = []
+        self.select_field()
+
 
     def process_frame(self):
         frame = self.video_stream.read()
         balls, bots, arena = self.detect_yolo(frame)
         bot_angle, bot_center_point, goal_center_point, other_aruco_codes = self.detect_aruco()
-        detection_object = {'yolo' :{'balls': balls, 'bots': bots, 'arena': arena},'aruco': {'bot_angle': bot_angle,
-                            'bot_center_point': bot_center_point, 'goal_center_point': goal_center_point,
-                            'other_aruco codes': other_aruco_codes}}
+        detection_object = {
+            'yolo' : {'balls': balls, 'bots': bots, 'arena': arena},
+            'aruco': {'bot_angle': bot_angle, 'bot_center_point': bot_center_point,
+                       'goal_center_point': goal_center_point, 'other_aruco codes': other_aruco_codes}}
         self.detection_object = detection_object
         return detection_object
 
@@ -117,6 +123,31 @@ class Detection:
         bot_angle = calculate_angle_to_point(bot_center_point, mid_point)        
         return bot_angle, bot_center_point
 
+    def select_field(self):
+        cv2.namedWindow("Select Rectangle")
+        cv2.setMouseCallback("Select Rectangle", self.select_corners)
+
+        while True:
+            frame = self.video_stream.read()
+            # Trace mouse movement
+
+            # Display the video frame
+            cv2.imshow("Select Rectangle", frame)
+
+            # Break the loop on 'q' key press
+            if len(self.field_corners) == 4:
+                print(self.field_corners)
+                break
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            time.sleep(1)
+
+        # Release the video capture and close all windows
+        cv2.destroyAllWindows()
+
+    def select_corners(self,event, x, y, flags, param):        
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.field_corners.append((x, y))
 
 class VideoStream:
     def __init__(self, url):
@@ -147,6 +178,9 @@ class VideoStream:
 
     def read(self):
         return self.latest_frame
+        frame = cv2.imread('output_image9.jpg')
+        return frame
+    
     def stop(self):
         self.stopped = True
         self.thread.join()

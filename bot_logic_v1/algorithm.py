@@ -1,7 +1,6 @@
 import time
 import cv2
 
-from yolo import findvirtualpoint
 
 from const import BLUE, GREEN, RED
 
