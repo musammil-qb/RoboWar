@@ -54,6 +54,12 @@ def define_trimmed_field(corners):
             (int(p3[0] - trim_length), int(p3[1] - trim_length)),
             (int(p4[0] + trim_length), int(p4[1] - trim_length))
         ]
+        # trimmed_field = [
+        #     (int(p1[0] + trim_length), int(p1[1] + trim_length)),
+        #     (int(p2[0]), int(p2[1] + trim_length)),
+        #     (int(p3[0] - trim_length), int(p3[1] - trim_length)),
+        #     (int(p4[0] + trim_length), int(p4[1] - trim_length))
+        # ]
         trimmed_field = trimmed_field
         return trimmed_field
 
@@ -171,7 +177,7 @@ def find_parallel_point_inside_border(given_point, border_points, offset=40):
         inside_point = given_point + offset * perpendicular_vector
         is_inside = cv2.pointPolygonTest(border_points, tuple(inside_point), False) >= 0
 
-    return tuple(map(int, inside_point))
+    return tuple(map(int, inside_point)), side_name
 
 # Define a function to calculate the distance from a point to a line segment
 def point_to_line_distance(point, line_start, line_end):
@@ -208,6 +214,7 @@ def closest_border_top_or_bottom(point, border_points):
 # Create a window for selecting corners
 cv2.namedWindow("Select Rectangle")
 cv2.setMouseCallback("Select Rectangle", select_corners)
+bot_offset = 1
 
 while True:
     
@@ -224,15 +231,17 @@ while True:
             trimmed_field = np.array(trimmed_field)
 
             if not is_point_inside_border_v2(e1, trimmed_field):
-                next_viable_point = find_parallel_point_inside_border(e1,np.array(corners))
-                closest_side, _ = closest_border_top_or_bottom(next_viable_point, np.array(corners))
-                midpoint = (int((next_viable_point[0] + points[0][0]) / 2), int((next_viable_point[1] + points[0][1]) / 2))
-                print(midpoint)
-                cv2.circle(cap, midpoint, 2, Green, 2)
-                if closest_side == "top":
-                    print("Anti-Clockwise")
-                if closest_side == "bottom":
-                    print("Clockwise")
+                next_viable_point, side_name = find_parallel_point_inside_border(e1,np.array(corners))
+                if side_name != "right" or side_name != "left":
+                    # closest_side, _ = closest_border_top_or_bottom(next_viable_point, np.array(corners))
+                    midpoint = (int((next_viable_point[0] + points[0][0]) / 2), int((next_viable_point[1] + points[0][1]) / 2))
+                    midpoint = next_viable_point + bot_offset * np.array([1,1])
+                    # print(midpoint)
+                    cv2.circle(cap, midpoint, 2, Green, 2)
+                    if side_name == "top":
+                        print("Anti-Clockwise")
+                    if side_name == "bottom":
+                        print("Clockwise")
 
     # Trace mouse movement
     # trace_mouse(cap, mouse_position)
