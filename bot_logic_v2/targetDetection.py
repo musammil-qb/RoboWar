@@ -20,14 +20,10 @@ def filter_balls(trimmed_field, balls, goal_center_point, buffer_distance=20, di
             filtered_balls.append(ball)
             intersection_points.append({'target_point':e1, 'goal_point':e2})
 
-        else:
-            print(f"Ball at {ball} has an extended point outside the field; not targeted.")
-
     return filtered_balls, intersection_points
 
 
 def calculate_extended_points(ball_pos,goal_center, buffer_distance=20,extension_factor_before=0.2, extension_factor_after=0.1):
-    print(f"goal post:{goal_center} ball pos:{ball_pos}")
     dx, dy = goal_center[0] - ball_pos[0], goal_center[1] - ball_pos[1]
     length = math.sqrt(dx**2 + dy**2)
     if length == 0:
