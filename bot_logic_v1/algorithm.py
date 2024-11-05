@@ -38,7 +38,7 @@ def algorithm(detection, bot):
             time_delay = bot.move(selected_point)
             time.sleep((time_delay/1000)+0.5)
             bot.makeMovement('right', 2000)
-            selected_point =None
+            selected_point = None
 
         draw_rectangle(frame, detection.trimmed_field,BLUE)
         draw_rectangle(frame, detection.field_corners,GREEN)

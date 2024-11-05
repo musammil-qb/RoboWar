@@ -24,10 +24,10 @@ def algorithm(detection, bot):
     while True:
 
         frame = detection.video_stream.read() # remove
-
         if balls is not None:
             for ball in balls:
                 cv2.circle(frame, ball, 5, RED, -1)
+        cv2.imshow('Feed', frame)
         if selected_point is not None:
             cv2.circle(frame,selected_point,5,RED,5)
             cv2.imshow('Feed', frame)
@@ -40,8 +40,9 @@ def algorithm(detection, bot):
                 continue
             bot.updatePosition(bot_center_point, bot_angle)
             time.sleep(0.1)
-            time_delay = bot.move(selected_point)
-            time.sleep((time_delay/1000)+0.5)
+            bot.setSpeed(4)
+            bot.move(selected_point)
+            bot.setSpeed(6)
             bot.makeMovement('right', 2000)
             selected_point = None
 
@@ -55,10 +56,11 @@ def algorithm(detection, bot):
             print("Exiting...")
             break
         elif pressed_key == ord('i'):
-            input("waiting for interept")
+            input("waiting for interrupt")
         # elif pressed_key == ord('t'):
         detection_object = detection.process_frame()
         trimmed_field = detection.trimmed_field
+        time.sleep(0.5)
         bot_center_point, balls, goal_center_point =  detection_object['aruco']['bot_center_point'],detection_object['yolo']['balls'],detection_object['aruco']['goal_center_point']
         if any([balls == [] , goal_center_point is None , bot_center_point is None]):
             print(f"Detection failed goal post: {goal_center_point}, bot center point: {bot_center_point} no of balls:{len(balls)}")
@@ -66,68 +68,49 @@ def algorithm(detection, bot):
         print(f"Detection failed goal post: {goal_center_point}, bot center point: {bot_center_point} no of balls:{len(balls)}")
 
         filtered_balls, intersection_points = filter_balls(trimmed_field,balls, goal_center_point ,buffer_distance=50)
+        cv2.imshow('Feed', frame)
         next_target_point = choose_next_target_point(intersection_points, bot_center_point)
+        next_target_point = None
         if next_target_point is not None:
             print('target locked')
+            cv2.circle(frame, target_point, 5, BLUE, -1)
+            cv2.circle(frame, goal_point, 5, GREEN, -1)
             target_point = next_target_point['target_point']
             goal_point = next_target_point['goal_point']
-            frame = detection.video_stream.read()
+            frame = detection.video_stream.latest_frame
             cv2.circle(frame, target_point, 5, BLUE, -1)
             cv2.circle(frame, goal_point, 5, GREEN, -1)
             cv2.imshow('Feed', frame)
-            # elif pressed_key == ord('g'):
+            time.sleep(0.5)
+            detection_object = detection.process_frame()
             bot_center_point , bot_angle = detection.detection_object['aruco']['bot_center_point'], detection.detection_object['aruco']['bot_angle']
             if bot_center_point is None:
                 print("Bot not found interrupt")
                 continue
             bot.updatePosition(bot_center_point, bot_angle)
-            time_delay = bot.move(target_point)
-            time.sleep((time_delay/1000)+0.5)
+            bot.move(target_point)
+            time.sleep(0.5)
+
             bot_angle, bot_center_point, goal_center_point, _ = detection.detect_aruco()
             if bot_center_point is None:
                 print("Bot not found interrupt")
                 continue
             bot.updatePosition(bot_center_point, bot_angle)
-            time_delay = bot.move(goal_point)
-            time.sleep((time_delay/1000)+0.5)
+            bot.move(goal_point)
             print("Goal reached!")
+            time.sleep(0.5)
+
             bot_angle, bot_center_point, goal_center_point, _ = detection.detect_aruco()
             if bot_center_point is None:
                 print("Bot not found interrupt")
                 continue
             bot.updatePosition(bot_center_point, bot_angle)
-            time_delay = bot.move(target_point)
-            time.sleep((time_delay/1000)+0.5)
+            bot.move(target_point)
             target_point, goal_point = None, None
             time.sleep(DELAY_AFTER_GOAL)
         else:
             print("No extended points found within the trimmed field.")
+            ball = []
             if balls:
                 ball = balls[0]
                 selected_point = ball
-
-        #     filtered_balls, intersection_points = filter_balls(trimmed_field,balls, goal_center_point ,buffer_distance=20,disable_filter=True)
-        #     next_target_point = choose_next_target_point(intersection_points, bot_center_point)
-        #     if next_target_point is not None:
-        #         print('target locked')
-        #         target_point = next_target_point['target_point']
-        #         goal_point = next_target_point['goal_point']
-        #         frame = detection.video_stream.read()
-        #         cv2.circle(frame, target_point, 5, BLUE, -1)
-        #         cv2.circle(frame, goal_point, 5, GREEN, -1)
-        #         cv2.imshow('Feed', frame)
-        #         time.sleep(1)
-        #         # elif pressed_key == ord('g'):
-        #         bot_center_point , bot_angle = detection.detection_object['aruco']['bot_center_point'], detection.detection_object['aruco']['bot_angle']
-        #         bot.updatePosition(bot_center_point, bot_angle)
-        #         time_delay = bot.move(target_point)
-        #         time.sleep((time_delay/1000)+0.5)
-        #         bot_angle, bot_center_point, goal_center_point, _ = detection.detect_aruco()
-        #         bot.updatePosition(bot_center_point, bot_angle)
-        #         time_delay = bot.move(goal_point)
-        #         time.sleep((time_delay/1000)+0.5)
-        #         print("Goal reached!")
-        #         target_point, goal_point = None, None
-        #         time.sleep(DELAY_AFTER_GOAL)
-            # else:
-            #     print("No possible goals")
