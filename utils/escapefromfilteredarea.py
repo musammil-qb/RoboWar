@@ -54,6 +54,12 @@ def define_trimmed_field(corners):
             (int(p3[0] - trim_length), int(p3[1] - trim_length)),
             (int(p4[0] + trim_length), int(p4[1] - trim_length))
         ]
+        # trimmed_field = [
+        #     (int(p1[0] + trim_length), int(p1[1] + trim_length)),
+        #     (int(p2[0]), int(p2[1] + trim_length)),
+        #     (int(p3[0] - trim_length), int(p3[1] - trim_length)),
+        #     (int(p4[0] + trim_length), int(p4[1] - trim_length))
+        # ]
         trimmed_field = trimmed_field
         return trimmed_field
 
