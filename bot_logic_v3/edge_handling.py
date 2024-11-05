@@ -57,8 +57,7 @@ def find_parallel_point_inside_border(given_point, border_points, offset=40):
             offset -= 10
         inside_point = given_point + offset * perpendicular_vector
         is_inside = cv2.pointPolygonTest(border_points, tuple(inside_point), False) >= 0
-
-    return tuple(map(int, inside_point))
+    return tuple(map(int, inside_point)), side_name
 
 
 # Define a function to calculate the distance from a point to a line segment
