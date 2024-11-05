@@ -93,6 +93,7 @@ class Bot:
         self.makeMovement(rotation_direction, rotation_time_ms)
         time.sleep(rotation_time_ms/1000)
         self.makeMovement(travel_direction, travel_time_ms)
+        return rotation_time_ms + travel_time_ms
 
     def calculateMovement(self, target_point):
         bot_position, bot_angle = self.position, self.angle

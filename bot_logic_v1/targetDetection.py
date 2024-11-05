@@ -21,7 +21,8 @@ def filter_balls(trimmed_field,balls, goal_center_point,buffer_distance=20):
     return filtered_balls, intersection_points
 
 
-def calculate_extended_points(ball_pos,goal_center, buffer_distance):
+def calculate_extended_points(ball_pos,goal_center, buffer_distance=20):
+    print(f"goal post:{goal_center} ball pos:{ball_pos}")
     dx, dy = goal_center[0] - ball_pos[0], goal_center[1] - ball_pos[1]
     length = math.sqrt(dx**2 + dy**2)
     if length == 0:
@@ -51,7 +52,9 @@ def is_point_in_polygon(point, polygon):
     return cv2.pointPolygonTest(np.array(polygon), point, False) >= 0
 
 def choose_next_target_point(intersection_points, bot_center_point):
-    return min(intersection_points, key=lambda point: math.sqrt((point['target_point'][0] - bot_center_point[0])**2 + (point['target_point'][1] - bot_center_point[1])**2))
+    if intersection_points:
+        return min(intersection_points, key=lambda point: math.sqrt((point['target_point'][0] - bot_center_point[0])**2 + (point['target_point'][1] - bot_center_point[1])**2))
+    return None
 
 if __name__ == '__main__':
     define_trimmed_field()

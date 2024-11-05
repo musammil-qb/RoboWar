@@ -38,7 +38,7 @@ class Detection:
     def process_frame(self):
         frame = self.video_stream.read()
         balls, bots, arena = self.detect_yolo(frame)
-        bot_angle, bot_center_point, goal_center_point, other_aruco_codes = self.detect_aruco()
+        bot_angle, bot_center_point, goal_center_point, other_aruco_codes = self.detect_aruco(frame)
         detection_object = {
             'yolo' : {'balls': balls, 'bots': bots, 'arena': arena},
             'aruco': {'bot_angle': bot_angle, 'bot_center_point': bot_center_point,
@@ -47,9 +47,11 @@ class Detection:
         return detection_object
 
 
-    def detect_yolo(self, frame):
+    def detect_yolo(self, frame=None):
+        if frame is None:
+            frame = self.video_stream.read()
         model = self.model
-        result = model.predict(frame, conf=0.5)
+        result = model.predict(frame, conf=0.5, verbose=False)
         balls = []
         bot = None
         arena = None
@@ -81,8 +83,9 @@ class Detection:
         return balls, bot, arena
 
 
-    def detect_aruco(self):
-        frame = self.video_stream.read()
+    def detect_aruco(self, frame=None):
+        if frame is None:
+            frame = self.video_stream.read()
         markers_dict_np, markers_dict_integer = self.detect_aruco_markers(frame)
         bot_angle, bot_center_point = self.find_bot(markers_dict_integer.pop(BOT_ID)) if markers_dict_integer.get(BOT_ID) else (None,None)
         _, goal_center_point = self.find_bot(markers_dict_integer.pop(POST_ID)) if markers_dict_integer.get(POST_ID) else (None,None)
