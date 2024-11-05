@@ -30,6 +30,7 @@ class Detection:
         print("Video stream started!")
         #TODO select field
         self.field_corners = []
+        self.edge_line  = None
         self.select_field()
         self.define_trimmed_field()
         print("Detection initialized!")
@@ -163,11 +164,16 @@ class Detection:
 
     def select_corners(self,event, x, y, flags, param):        
         if event == cv2.EVENT_LBUTTONDOWN:
-            self.field_corners.append((x, y))
+            if len(self.field_corners) < 4:
+                self.field_corners.append((x, y))
+            # else:
+            #     self.
+
+
 
     def define_trimmed_field(self):
         field_corners = self.field_corners
-        trim_factor = 0.06
+        trim_factor = 0.03
         trim_length = calculate_distance(field_corners[0], field_corners[1])*trim_factor
         
         p1, p2, p3, p4 = np.array(field_corners)

@@ -19,7 +19,7 @@ def main():
             break
         time.sleep(0.5)
     bot = Bot(bot_center_point, bot_angle,detection)
-
+    # bot = None
     print("Initializing completed!")
 
     # Wait for start key

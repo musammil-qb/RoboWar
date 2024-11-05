@@ -28,8 +28,8 @@ class Bot:
         if not os.path.exists(calibrate_file):
             caliberation_speed['forward'] = self.caliberateMovement('forward', 500, detection)
             caliberation_speed['backward'] = self.caliberateMovement('backward', 500, detection)
-            caliberation_speed['right'] = self.caliberateMovement('right', 200, detection)
-            caliberation_speed['left'] = self.caliberateMovement('left', 200, detection)
+            caliberation_speed['right'] = self.caliberateMovement('right', 100, detection)
+            caliberation_speed['left'] = self.caliberateMovement('left', 100, detection)
             
             with open(calibrate_file, "w") as calibrationfile:
                 json.dump(caliberation_speed, calibrationfile)
