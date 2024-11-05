@@ -7,9 +7,9 @@ from const import *
 
 class Bot:
     def __init__(self, position, angle,detection):
-        #to do
+        #todo
         self.bot_ip = '10.42.0.202'
-        self.position = position #bot center point
+        self.position = position # bot center point
         self.angle = angle
         self.direction = 'stop'
         self.speed = None
@@ -28,8 +28,8 @@ class Bot:
         if not os.path.exists(calibrate_file):
             caliberation_speed['forward'] = self.caliberateMovement('forward', 500, detection)
             caliberation_speed['backward'] = self.caliberateMovement('backward', 500, detection)
-            caliberation_speed['right'] = self.caliberateMovement('right', 200, detection)
-            caliberation_speed['left'] = self.caliberateMovement('left', 200, detection)
+            caliberation_speed['right'] = self.caliberateMovement('right', 100, detection)
+            caliberation_speed['left'] = self.caliberateMovement('left', 100, detection)
             
             with open(calibrate_file, "w") as calibrationfile:
                 json.dump(caliberation_speed, calibrationfile)

@@ -3,10 +3,11 @@ import cv2
 import math
 from detection import Detection
 
-extension_factor_before = 0.2  # Percentage for point before the ball
-extension_factor_after = 0.1
+# extension_factor_before = 0.2  # Percentage for point before the ball
+# extension_factor_after = 0.1
 
-def filter_balls(trimmed_field,balls, goal_center_point,buffer_distance=20):
+
+def filter_balls(trimmed_field, balls, goal_center_point, buffer_distance=20, disable_filter=False):
     filtered_balls = []
     intersection_points = []
     for ball in balls:
@@ -15,13 +16,17 @@ def filter_balls(trimmed_field,balls, goal_center_point,buffer_distance=20):
         if is_point_in_polygon(e1, trimmed_field) and is_point_in_polygon(e2, trimmed_field):
             filtered_balls.append(ball)
             intersection_points.append({'target_point':e1, 'goal_point':e2})
+        elif disable_filter:
+            filtered_balls.append(ball)
+            intersection_points.append({'target_point':e1, 'goal_point':e2})
+
         else:
             print(f"Ball at {ball} has an extended point outside the field; not targeted.")
 
     return filtered_balls, intersection_points
 
 
-def calculate_extended_points(ball_pos,goal_center, buffer_distance=20):
+def calculate_extended_points(ball_pos,goal_center, buffer_distance=20,extension_factor_before=0.2, extension_factor_after=0.1):
     print(f"goal post:{goal_center} ball pos:{ball_pos}")
     dx, dy = goal_center[0] - ball_pos[0], goal_center[1] - ball_pos[1]
     length = math.sqrt(dx**2 + dy**2)

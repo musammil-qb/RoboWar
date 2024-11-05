@@ -2,3 +2,5 @@ venv
 extracted_frames/*
 */__pycache__/*
 field_corners.py
+bot_logic_v*/calibrated_speed*
+bot_logic_v*/corners.json
