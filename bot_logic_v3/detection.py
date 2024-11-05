@@ -12,22 +12,27 @@ from util import calculate_angle_to_point,calculate_distance
 from const import BOT_ID, POST_ID, BLUE
 
 class Detection:
-    def __init__(self):
+    def __init__(self,image_path=None, video_path=None):
         print("Initializing detection...")
         self.model = YOLO("model.pt")
         self.detection_object = None
         # start video stream
-        cam_ip = input("Enter camera ip: ")
-        if not cam_ip:
-            cam_ip = "10.42.0.66"  #TODO ip from input
+        if image_path:
+            self.video_stream = VideoStream(image_path=image_path)
+        elif video_path:
+            self.video_stream = VideoStream(video_path=video_path, target_fps=30)
+        else:
+            cam_ip = input("Enter camera ip: ")
+            if not cam_ip:
+                cam_ip = "10.42.0.66"  #TODO ip from input
 
-        stream_url = f'http://{cam_ip}:8080/video'
-        self.video_stream = VideoStream(stream_url)
+            stream_url = f'http://{cam_ip}:8080/video'
+            self.video_stream = VideoStream(stream_url)
 
-        while True:
-            if self.video_stream.read() is not None:
-                break
-        print("Video stream started!")
+            while True:
+                if self.video_stream.read() is not None:
+                    break
+            print("Video stream started!")
         #TODO select field
         self.field_corners = []
         self.edge_line  = None
@@ -186,15 +191,35 @@ class Detection:
         self.trimmed_field = trimmed_field
 
 class VideoStream:
-    def __init__(self, url):
+    def __init__(self, url=None,image_path=None,video_path=None,target_fps=30):
         self.url = url
-        self.cap = cv2.VideoCapture(self.url)
+        self.image_path = image_path
+        self.video_path = video_path
         self.latest_frame = None
         self.stopped = False
+        if image_path is None :
+            if video_path is None:
+                self.cap = cv2.VideoCapture(self.url)
+            elif os.path.exists(video_path):
+                self.cap = cv2.VideoCapture(self.video_path)
+            else:
+                print("Video file does not exist.")
+                exit(0)
+            self.frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            self.frame_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.thread = threading.Thread(target=self.update, daemon=True)
+            self.thread.start()
+
+        elif os.path.exists(image_path):
+            self.latest_frame = cv2.imread(self.image_path)
+            self.frame_width = self.latest_frame.shape[1]
+            self.frame_height = self.latest_frame.shape[0]
+
+        else:
+            print("Image file does not exist.")
+            exit(0)
 
         # Start the thread to read frames
-        self.thread = threading.Thread(target=self.update, daemon=True)
-        self.thread.start()
     
     def update(self):
         while not self.stopped:
@@ -210,12 +235,10 @@ class VideoStream:
                 print("Failed to open video stream.")
                 self.stop()
                 break
-            # time.sleep(0.01)  # Small delay to prevent excessive CPU usage
+            # time.sleep(1)  # Small delay to prevent excessive CPU usage
 
     def read(self):
         return self.latest_frame
-        frame = cv2.imread('output_image9.jpg')
-        return frame
     
     def stop(self):
         self.stopped = True
