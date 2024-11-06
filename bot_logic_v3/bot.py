@@ -8,28 +8,34 @@ from const import *
 class Bot:
     def __init__(self, position, angle,detection):
         #todo
-        self.bot_ip = '10.42.0.202'
+        self.bot_ip = input("Enter Bot ip: ")
+        if not self.bot_ip:
+            self.bot_ip = "192.168.123.103"  #TODO ip from input
         self.position = position # bot center point
         self.angle = angle
         self.direction = 'stop'
         self.speed = None
-        self.setSpeed(6)
-        self.rate_of_movement = self.calliberate(detection)
+        self.setSpeed(MOVEMENT_SPEED)
+        self.rate_of_movement = self.calibrate(detection)
         self.command = {
             'direction' : None,
             'interval': None, 
             'time_of_command': None
         }
 
-    def calliberate(self, detection):
+    def calibrate(self, detection):
         calibrate_file = "calibrated_speed.json"
-        caliberation_speed = {}
+        caliberation_speed = {'forward': {}, 'backward': {}, 'right': {}, 'left': {}}
         
         if not os.path.exists(calibrate_file):
-            caliberation_speed['forward'] = self.caliberateMovement('forward', 500, detection)
-            caliberation_speed['backward'] = self.caliberateMovement('backward', 500, detection)
-            caliberation_speed['right'] = self.caliberateMovement('right', 100, detection)
-            caliberation_speed['left'] = self.caliberateMovement('left', 100, detection)
+            # todo find offset values (angle difference for example)
+            for sample_ms in BOT_CALIBRATION_MOVEMENT__MS_SAMPLES:
+                caliberation_speed['forward'].update(self.caliberateMovement('forward', sample_ms, detection))
+                caliberation_speed['backward'].update(self.caliberateMovement('backward', sample_ms, detection))
+
+            for sample_ms in BOT_CALIBRATION_ROTATION_MS_SAMPLES:
+                caliberation_speed['right'].update(self.caliberateMovement('right', sample_ms, detection))
+                caliberation_speed['left'].update(self.caliberateMovement('left', sample_ms, detection))
             
             with open(calibrate_file, "w") as calibrationfile:
                 json.dump(caliberation_speed, calibrationfile)
@@ -48,11 +54,12 @@ class Bot:
             time.sleep(3)
 
             final_position, _ = self.getPositionAndAngle(detection)
-
+            print(f"initial position: {initial_position} Final position:{final_position}")
             # Calculate distance traveled per millisecond
             distance_traveled = calculate_distance(initial_position, final_position)
+            rate = interval / distance_traveled  if distance_traveled > 0 else 0
             
-            return distance_traveled / interval if distance_traveled > 0 else 0
+            return {distance_traveled: rate}
 
         else:
             _, initial_angle = self.getPositionAndAngle(detection)
@@ -61,10 +68,13 @@ class Bot:
             time.sleep(3)
 
             _ ,final_angle = self.getPositionAndAngle(detection)
+            print(f"initial angle: {initial_angle} Final angle: {final_angle}")
 
             # Calculate angle change per millisecond
             angle_traveled = abs(final_angle - initial_angle)
-            return angle_traveled / interval if angle_traveled > 0 else 0
+            rate =  interval / angle_traveled  if angle_traveled > 0 else 0
+
+            return {angle_traveled: rate}
 
 
 
@@ -77,8 +87,14 @@ class Bot:
         self.position = position
         self.angle = angle
 
-    def makeMovement(self, movement, interval):
+    def makeMovement(self, movement, interval, edge_rotation=False):
+        if movement in ['right', 'left'] and not edge_rotation:
+            self.setSpeed(ROTATION_SPEED)
+
         res = requests.get(f"http://{self.bot_ip}/{movement}", params={"delay": interval})
+        if movement in ['right', 'left'] and not edge_rotation:
+            self.setSpeed(MOVEMENT_SPEED)
+
         if res.status_code ==200:
             print(f"moved {movement} time:{interval}")
     
@@ -91,10 +107,10 @@ class Bot:
         x, y = target_point
         rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement((x, y))
         self.makeMovement(rotation_direction, rotation_time_ms)
-        time.sleep(rotation_time_ms/1000)
+        time.sleep((rotation_time_ms/1000)+0.05)
         self.makeMovement(travel_direction, travel_time_ms)
-        return rotation_time_ms + travel_time_ms
-
+        time.sleep((travel_time_ms/1000)+0.05)
+        
     def calculateMovement(self, target_point):
         bot_position, bot_angle = self.position, self.angle
         # Calculate distance and angle to target
@@ -120,14 +136,22 @@ class Bot:
             rotation_needed = 360 - rotation_needed
 
         # Calculate rotation and travel time
-        rotation_time_ms = abs(rotation_needed) / self.rate_of_movement['right'] if rotation_direction == "right" else abs(rotation_needed) / self.rate_of_movement['left']
-        travel_time_ms = distance_to_target / self.rate_of_movement['forward'] if travel_direction == "forward" else distance_to_target / self.rate_of_movement['backward']
-        
+        rotation_time_ms = abs(rotation_needed) * self.get_closest_rate(
+            rotation_needed, self.rate_of_movement[rotation_direction])
+        travel_time_ms = distance_to_target * self.get_closest_rate(distance_to_target,
+                                  self.rate_of_movement[travel_direction])
         # Display the movement steps
         print(f"Rotation needed: {rotation_needed:.2f} degrees ({rotation_direction}), Time: {rotation_time_ms:.2f} ms")
         print(f"Move {travel_direction} to target, Distance: {distance_to_target:.2f} pixels, Time: {travel_time_ms:.2f} ms")
 
         return rotation_time_ms, rotation_direction, travel_direction, travel_time_ms
+ 
+    def get_closest_rate(target, rate_dict):
+        # Find the key in rate closest to the target value
+        closest_sample = min(rate_dict.keys(), key=lambda k: abs(k- target))
+        return rate_dict[closest_sample]
+
+
 
 
 if __name__ == '__main__':

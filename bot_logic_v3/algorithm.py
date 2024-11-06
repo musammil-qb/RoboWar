@@ -16,7 +16,7 @@ def select_point(event, x, y, flags, param):
         selected_point = (x, y)
         
 
-def algorithm(detection, bot, display=True, test=False, image=False):
+def algorithm(detection, bot, display=True, test=False, image=False, disable_algorithm_movement=False):
     global target_point,selected_point
     rotation_direction = None
 
@@ -50,11 +50,8 @@ def algorithm(detection, bot, display=True, test=False, image=False):
                 continue
             if bot:
                 bot.updatePosition(bot_center_point, bot_angle)
-                bot.setSpeed(4)
                 bot.move(selected_point)
                 time.sleep(DELAY_AFTER_MOVEMENT)
-                bot.setSpeed(6)
-                bot.makeMovement('right', 2000)
             selected_point = None
 
         pressed_key = cv2.waitKey(1)
@@ -92,8 +89,7 @@ def algorithm(detection, bot, display=True, test=False, image=False):
                 cv2.circle(frame, possible_movement['goal_point'], 5, YELLOW, -1)
             cv2.imshow('Feed', frame)
             cv2.waitKey(1)
-        next_target_point = None
-        if next_target_point is not None:
+        if next_target_point is not None and not disable_algorithm_movement:
             print('target locked')
             target_point = next_target_point['target_point']
             goal_point = next_target_point['goal_point']
@@ -114,7 +110,7 @@ def algorithm(detection, bot, display=True, test=False, image=False):
             if bot:
                 bot.updatePosition(bot_center_point, bot_angle)
                 bot.move(target_point)
-            time.sleep(0.5)
+            time.sleep(DELAY_AFTER_MOVEMENT)
 
             bot_angle, bot_center_point, goal_center_point, _ = detection.detect_aruco()
             if bot_center_point is None:
@@ -124,7 +120,7 @@ def algorithm(detection, bot, display=True, test=False, image=False):
                 bot.updatePosition(bot_center_point, bot_angle)
                 bot.move(goal_point)
             print("Goal reached!")
-            time.sleep(0.5)
+            time.sleep(DELAY_AFTER_MOVEMENT)
 
             bot_angle, bot_center_point, goal_center_point, _ = detection.detect_aruco()
             if bot_center_point is None:
@@ -133,9 +129,10 @@ def algorithm(detection, bot, display=True, test=False, image=False):
             if bot:
                 bot.updatePosition(bot_center_point, bot_angle)
                 bot.move(target_point)
+                time.sleep(DELAY_AFTER_MOVEMENT)
             target_point, goal_point = None, None
             time.sleep(DELAY_AFTER_GOAL)
-        else:
+        elif not disable_algorithm_movement:
             # print(            print("No extended points found within the trimmed field.")
             trimmed_field = np.array(detection.trimmed_field)
             field_corners = np.array(detection.field_corners)
@@ -155,6 +152,4 @@ def algorithm(detection, bot, display=True, test=False, image=False):
                     cv2.putText(frame, rotation_direction, (midpoint[0], midpoint[1]-30), cv2.FONT_HERSHEY_SIMPLEX,
                                 1, GREEN, 1, cv2.LINE_AA)
                     cv2.imshow('Feed',frame)
-
-
         completed = True
