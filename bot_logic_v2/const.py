@@ -1,13 +1,16 @@
-# Constants for bot movement (based on given specifications)
-FRONT_TRAVEL_PIXELS_PER_MS = 393 / 1000  # pixels per ms for forward movement
-BACK_TRAVEL_PIXELS_PER_MS = 386 / 1000   # pixels per ms for backward movement
-ROTATION_TIME_PER_DEGREE = 203 / 90      # ms per degree rotation
+# Sample ms to set calibration
+BOT_CALIBRATION_MOVEMENT__MS_SAMPLES = [500,1200]
+BOT_CALIBRATION_ROTATION_MS_SAMPLES = [150, 300]
+
+
 
 BOT_ID = 69
 POST_ID  = 92
 
+MOVEMENT_SPEED = 6
+ROTATION_SPEED = 4
 DELAY_AFTER_GOAL = 1
-DELAY_AFTER_MOVEMENT = 0.3
+DELAY_AFTER_MOVEMENT = 1
 
 BLUE = (255, 0, 0)
 GREEN = (0, 255, 0)

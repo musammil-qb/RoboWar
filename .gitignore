@@ -4,3 +4,6 @@ extracted_frames/*
 field_corners.py
 bot_logic_v*/calibrated_speed*
 bot_logic_v*/corners.json
+*.jpg
+*.png
+*.mp4

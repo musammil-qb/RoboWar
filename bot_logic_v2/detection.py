@@ -24,7 +24,7 @@ class Detection:
         else:
             cam_ip = input("Enter camera ip: ")
             if not cam_ip:
-                cam_ip = "10.42.0.66"  #TODO ip from input
+                cam_ip = "192.168.123.64"  #TODO ip from input
 
             stream_url = f'http://{cam_ip}:8080/video'
             self.video_stream = VideoStream(stream_url)
