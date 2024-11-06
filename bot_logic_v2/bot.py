@@ -6,7 +6,7 @@ from util import *
 from const import *
 
 class Bot:
-    def __init__(self, position, angle,detection):
+    def __init__(self, position, angle,detection,calibrate=True):
         #todo
         self.bot_ip = input("Enter Bot ip: ")
         if not self.bot_ip:
@@ -16,12 +16,13 @@ class Bot:
         self.direction = 'stop'
         self.speed = None
         self.setSpeed(MOVEMENT_SPEED)
-        self.rate_of_movement = self.calibrate(detection)
         self.command = {
             'direction' : None,
             'interval': None, 
             'time_of_command': None
         }
+        if calibrate:
+            self.calibrate(detection)
 
     def calibrate(self, detection):
         calibrate_file = "calibrated_speed.json"
@@ -42,7 +43,7 @@ class Bot:
         else:
             with open(calibrate_file, "r") as calibrationfile:
                 caliberation_speed = json.load(calibrationfile)
-
+        self.rate_of_movement = caliberation_speed
         return caliberation_speed
 
 
