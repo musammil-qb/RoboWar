@@ -10,12 +10,13 @@ class Bot:
         #todo
         self.bot_ip = input("Enter Bot ip: ")
         if not self.bot_ip:
-            self.bot_ip = "192.168.123.103"  #TODO ip from input
+            self.bot_ip = "192.168.32.103"  #TODO ip from input
         self.position = position # bot center point
         self.angle = angle
         self.direction = 'stop'
         self.speed = None
         self.setSpeed(MOVEMENT_SPEED)
+        self.detection = detection 
         self.command = {
             'direction' : None,
             'interval': None, 
@@ -30,7 +31,7 @@ class Bot:
         
         if not os.path.exists(calibrate_file):
             # todo find offset values (angle difference for example)
-            for sample_ms in BOT_CALIBRATION_MOVEMENT__MS_SAMPLES:
+            for sample_ms in BOT_CALIBRATION_MOVEMENT_MS_SAMPLES:
                 caliberation_speed['forward'].update(self.caliberateMovement('forward', sample_ms, detection))
                 caliberation_speed['backward'].update(self.caliberateMovement('backward', sample_ms, detection))
 
@@ -44,31 +45,36 @@ class Bot:
             with open(calibrate_file, "r") as calibrationfile:
                 caliberation_speed = json.load(calibrationfile)
         self.rate_of_movement = caliberation_speed
+        print(caliberation_speed)
         return caliberation_speed
 
 
     def caliberateMovement(self, direction, interval, detection):
         if direction in ['forward', 'backward']:
-            initial_position, _ = self.getPositionAndAngle(detection)
+            initial_position, _ = self.getPositionAndAngle()
 
             self.makeMovement(direction, interval)
-            time.sleep(3)
+            time.sleep(1)
 
-            final_position, _ = self.getPositionAndAngle(detection)
+            final_position, _ = self.getPositionAndAngle()
             print(f"initial position: {initial_position} Final position:{final_position}")
             # Calculate distance traveled per millisecond
-            distance_traveled = calculate_distance(initial_position, final_position)
+            if initial_position is not None and final_position is not None:
+                distance_traveled = calculate_distance(initial_position, final_position)
+            else:
+                print(f"Initial position: {initial_position} final position: {final_position} please restart")
+                exit(0)
             rate = interval / distance_traveled  if distance_traveled > 0 else 0
             
             return {distance_traveled: rate}
 
         else:
-            _, initial_angle = self.getPositionAndAngle(detection)
+            _, initial_angle = self.getPositionAndAngle()
 
             self.makeMovement(direction, interval)
-            time.sleep(3)
+            time.sleep(1)
 
-            _ ,final_angle = self.getPositionAndAngle(detection)
+            _ ,final_angle = self.getPositionAndAngle()
             print(f"initial angle: {initial_angle} Final angle: {final_angle}")
 
             # Calculate angle change per millisecond
@@ -79,14 +85,19 @@ class Bot:
 
 
 
-    def getPositionAndAngle(self,detection):
-        bot_angle, bot_center_point, goal_center_point, other_aruco_codes = detection.detect_aruco()
+    def getPositionAndAngle(self):
+        bot_center_point =None
+        while bot_center_point is None:
+            print("Bot position not found recalculating")
+            bot_angle, bot_center_point, _, _ = self.detection.detect_aruco()
+            time.sleep(0.2)
         return bot_center_point, bot_angle
 
 
-    def updatePosition(self, position, angle):
-        self.position = position
-        self.angle = angle
+    def updatePosition(self):
+        bot_center_point ,bot_angle = self.getPositionAndAngle()
+        self.position = bot_center_point
+        self.angle = bot_angle
 
     def makeMovement(self, movement, interval, edge_rotation=False):
         if movement in ['right', 'left'] and not edge_rotation:
@@ -102,15 +113,30 @@ class Bot:
     def setSpeed(self, speed):
         self.speed = speed
         res = requests.get(f"http://{self.bot_ip}/speed", params={"speed": speed})
-        print(res.status_code)
+        # print(res.status_code)
 
-    def move(self, target_point):
-        x, y = target_point
-        rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement((x, y))
+    def move(self, target_point,aquire_target=True,orient_only=False):
+        if aquire_target is None or self.position is None:
+            print(f"target point or position failed target point:{aquire_target}  bot center point:{self.position}")
+            return False
+        rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement(target_point)
         self.makeMovement(rotation_direction, rotation_time_ms)
-        time.sleep((rotation_time_ms/1000)+0.05)
-        self.makeMovement(travel_direction, travel_time_ms)
-        time.sleep((travel_time_ms/1000)+0.05)
+        if not orient_only:
+            self.makeMovement(travel_direction, travel_time_ms)
+        time.sleep(0.3)
+        self.updatePosition()
+        distance = calculate_distance(self.position, target_point)
+        print(distance,aquire_target)
+        while distance > 15 and aquire_target:
+            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement(target_point)
+            self.makeMovement(rotation_direction, rotation_time_ms)
+            self.makeMovement(travel_direction, travel_time_ms)
+            self.updatePosition()
+            time.sleep(0.3)
+            distance = calculate_distance(self.position, target_point)
+            print(f"Distance diffrence: {distance} correcting")
+            
+        return "Completed"
         
     def calculateMovement(self, target_point):
         bot_position, bot_angle = self.position, self.angle
@@ -147,9 +173,9 @@ class Bot:
 
         return rotation_time_ms, rotation_direction, travel_direction, travel_time_ms
  
-    def get_closest_rate(target, rate_dict):
+    def get_closest_rate(self, target, rate_dict):
         # Find the key in rate closest to the target value
-        closest_sample = min(rate_dict.keys(), key=lambda k: abs(k- target))
+        closest_sample = min(rate_dict.keys(), key=lambda k: abs(int(float(k))- target))
         return rate_dict[closest_sample]
 
 

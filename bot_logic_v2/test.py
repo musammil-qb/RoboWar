@@ -8,7 +8,7 @@ from algorithm import algorithm
 from util import draw_rectangle
 from const import BLUE, GREEN
 
-def main(image_path=None, video_path=None, disable_bot=True,disable_algorithm_movement=False):
+def main(image_path=None, video_path=None, disable_bot=True,disable_algorithm=False):
 
     # Handle image or video input
     if image_path:
@@ -37,9 +37,9 @@ def main(image_path=None, video_path=None, disable_bot=True,disable_algorithm_mo
     print("Initialization completed!")
 
     try:
-        algorithm(detection, bot,test=True,image=bool(image_path),disable_algorithm_movement=disable_algorithm_movement)
+        algorithm(detection, bot,test=True,image=bool(image_path),disable_algorithm=disable_algorithm)
     except KeyboardInterrupt:
-        detection.destroy()
+        detection.__del__()
         print("Exiting...")
 
 if __name__ == "__main__":
@@ -47,7 +47,8 @@ if __name__ == "__main__":
     parser.add_argument("--image_path", type=str, help="Path to an image file.")
     parser.add_argument("--video_path", type=str, help="Path to a video file.")
     parser.add_argument("--disable_bot", action="store_true", help="Disable bot initialization.")
-    parser.add_argument("--disable_algorithm_movement", action="store_true", help="Disable algorithm movements.")
+    parser.add_argument("--disable_algorithm", action="store_true", help="Disable algorithm movements.")
     args = parser.parse_args()
 
-    main(image_path=args.image_path, video_path=args.video_path, disable_bot=args.disable_bot, disable_algorithm=args.disable_algorithm)
+    main(image_path=args.image_path, video_path=args.video_path, disable_bot=args.disable_bot, 
+          disable_algorithm=args.disable_algorithm)
