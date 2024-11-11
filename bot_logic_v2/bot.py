@@ -24,29 +24,45 @@ class Bot:
         }
         if calibrate:
             self.calibrate(detection)
+    def goto_inital_postion(self):
+        POINT_INFRONT_POST = (175, 240)
+        GOAL_POST =(510,256)
+        self.move(POINT_INFRONT_POST)
+        self.move(GOAL_POST, orient_only=True)
 
     def calibrate(self, detection):
         calibrate_file = "calibrated_speed.json"
-        caliberation_speed = {'forward': {}, 'backward': {}, 'right': {}, 'left': {}}
-        
+        rate_of_movement = {'forward': {}, 'backward': {}, 'right': {}, 'left': {}}
         if not os.path.exists(calibrate_file):
+            calibrate_temp_file = "calibrated_speed_temp.json"
+            if os.path.exists(calibrate_temp_file):
+                with open(calibrate_temp_file, "r") as calibrationfile:
+                        rate_of_movement = json.load(calibrationfile)
+                        self.rate_of_movement = rate_of_movement
+            else:
+                print("temporary calibration not found exiting")
+                exit(0)
             # todo find offset values (angle difference for example)
-            for sample_ms in BOT_CALIBRATION_MOVEMENT_MS_SAMPLES:
-                caliberation_speed['forward'].update(self.caliberateMovement('forward', sample_ms, detection))
-                caliberation_speed['backward'].update(self.caliberateMovement('backward', sample_ms, detection))
-
             for sample_ms in BOT_CALIBRATION_ROTATION_MS_SAMPLES:
-                caliberation_speed['right'].update(self.caliberateMovement('right', sample_ms, detection))
-                caliberation_speed['left'].update(self.caliberateMovement('left', sample_ms, detection))
-            
+                rate_of_movement['right'].update(self.caliberateMovement('right', sample_ms, detection))
+                rate_of_movement['left'].update(self.caliberateMovement('left', sample_ms, detection))
+            # self.goto_inital_postion()
+            input("Go to initial position and press enter")
+            counter = 0
+            for sample_ms in range(50,1350,30):
+                counter+=1
+                rate_of_movement['forward'].update(self.caliberateMovement('forward', sample_ms, detection))
+                rate_of_movement['backward'].update(self.caliberateMovement('backward', sample_ms, detection))
+                if counter %5 ==0:
+                    input("Go to initial position and press enter")
             with open(calibrate_file, "w") as calibrationfile:
-                json.dump(caliberation_speed, calibrationfile)
+                json.dump(rate_of_movement, calibrationfile)
         else:
             with open(calibrate_file, "r") as calibrationfile:
-                caliberation_speed = json.load(calibrationfile)
-        self.rate_of_movement = caliberation_speed
-        print(caliberation_speed)
-        return caliberation_speed
+                rate_of_movement = json.load(calibrationfile)
+        self.rate_of_movement = rate_of_movement
+        print(rate_of_movement)
+        return rate_of_movement
 
 
     def caliberateMovement(self, direction, interval, detection):
@@ -88,9 +104,10 @@ class Bot:
     def getPositionAndAngle(self):
         bot_center_point =None
         while bot_center_point is None:
-            print("Bot position not found recalculating")
             bot_angle, bot_center_point, _, _ = self.detection.detect_aruco()
-            time.sleep(0.2)
+            if bot_center_point is None:
+                print("Bot position not found recalculating")
+                time.sleep(0.2)
         return bot_center_point, bot_angle
 
 
@@ -115,26 +132,31 @@ class Bot:
         res = requests.get(f"http://{self.bot_ip}/speed", params={"speed": speed})
         # print(res.status_code)
 
-    def move(self, target_point,aquire_target=True,orient_only=False):
-        if aquire_target is None or self.position is None:
-            print(f"target point or position failed target point:{aquire_target}  bot center point:{self.position}")
+    def move(self, target_point,acquire_target=True,orient_only=False):
+        if target_point is None or self.position is None:
+            print(f"target point or position failed target point:{target_point}  bot center point:{self.position}")
             return False
         rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement(target_point)
         self.makeMovement(rotation_direction, rotation_time_ms)
-        if not orient_only:
+        if orient_only:
+            pass
+            # time.sleep(0.3)
+            # self.updatePosition()
+            # correction in angle
+        else:
             self.makeMovement(travel_direction, travel_time_ms)
-        time.sleep(0.3)
-        self.updatePosition()
-        distance = calculate_distance(self.position, target_point)
-        print(distance,aquire_target)
-        while distance > 15 and aquire_target:
-            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement(target_point)
-            self.makeMovement(rotation_direction, rotation_time_ms)
-            self.makeMovement(travel_direction, travel_time_ms)
-            self.updatePosition()
             time.sleep(0.3)
+            self.updatePosition()
             distance = calculate_distance(self.position, target_point)
-            print(f"Distance diffrence: {distance} correcting")
+            print(distance,acquire_target)
+            while distance > 15 and acquire_target:
+                rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement(target_point)
+                self.makeMovement(rotation_direction, rotation_time_ms)
+                self.makeMovement(travel_direction, travel_time_ms)
+                self.updatePosition()
+                time.sleep(0.3)
+                distance = calculate_distance(self.position, target_point)
+                print(f"Distance diffrence: {distance} correcting")
             
         return "Completed"
         

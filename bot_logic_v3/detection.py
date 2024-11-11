@@ -15,7 +15,7 @@ class Detection:
     def __init__(self,image_path=None, video_path=None):
         print("Initializing detection...")
         self.model = YOLO("model.pt")
-        self.detection_object = None
+        self.detection_object = {}
         # start video stream
         if image_path:
             self.video_stream = VideoStream(image_path=image_path)
@@ -24,7 +24,7 @@ class Detection:
         else:
             cam_ip = input("Enter camera ip: ")
             if not cam_ip:
-                cam_ip = "192.168.123.64"  #TODO ip from input
+                cam_ip = "192.168.32.247"  #TODO ip from input
 
             stream_url = f'http://{cam_ip}:8080/video'
             self.video_stream = VideoStream(stream_url)
@@ -49,7 +49,6 @@ class Detection:
             'yolo' : {'balls': balls, 'bots': bots, 'arena': arena},
             'aruco': {'bot_angle': bot_angle, 'bot_center_point': bot_center_point,
                        'goal_center_point': goal_center_point, 'other_aruco codes': other_aruco_codes}}
-        self.detection_object = detection_object
         return detection_object
 
 
@@ -85,7 +84,7 @@ class Detection:
                 if int(box.cls[0]) == 2: # Detect arena
                     x1, y1, x2, y2 = box.xyxy[0]
                     arena = [int(i) for i in [x1, y1, x2, y2]]
-
+        self.detection_object['yolo'] = {'balls': balls, 'bots': bot, 'arena': arena}
         return balls, bot, arena
 
 
@@ -95,12 +94,16 @@ class Detection:
         markers_dict_np, markers_dict_integer = self.detect_aruco_markers(frame)
         bot_angle, bot_center_point = self.find_bot(markers_dict_integer.pop(BOT_ID)) if markers_dict_integer.get(BOT_ID) else (None,None)
         _, goal_center_point = self.find_bot(markers_dict_integer.pop(POST_ID)) if markers_dict_integer.get(POST_ID) else (None,None)
+        self.detection_object['aruco'] = {'bot_angle': bot_angle, 'bot_center_point': bot_center_point,
+                       'goal_center_point': goal_center_point, 'other_aruco codes': markers_dict_integer}
         return bot_angle, bot_center_point, goal_center_point, markers_dict_integer
 
 
-    def destroy(self):
+    def __del__(self):
+        print("exiting 1")
         self.video_stream.stop()
-        self.destroy()
+        print("exiting 2 ")
+        super().__del__()
 
     def detect_aruco_markers(self,frame, draw_corners=False):
         aruco_type = cv2.aruco.DICT_4X4_100
@@ -133,9 +136,9 @@ class Detection:
     def find_bot(self, bot_corners):
         bot_corners = np.array(bot_corners)
         mid_point = (bot_corners[0]+bot_corners[1])/2
-        bot_center_point = (bot_corners[0]+bot_corners[1]+bot_corners[2]+bot_corners[3])/4
+        bot_center_point = ((bot_corners[0]+bot_corners[1]+bot_corners[2]+bot_corners[3])/4).tolist()
         bot_angle = calculate_angle_to_point(bot_center_point, mid_point)        
-        return bot_angle, bot_center_point
+        return bot_angle, (int(bot_center_point[0]), int(bot_center_point[1]))
 
     def select_field(self):
         file_path = 'corners.json'
@@ -146,6 +149,7 @@ class Detection:
         else:
             cv2.namedWindow("Feed")
             cv2.setMouseCallback("Feed", self.select_corners)
+            print("Select 4 corners of the field")
 
             while True:
                 frame = self.video_stream.read()
@@ -171,8 +175,6 @@ class Detection:
         if event == cv2.EVENT_LBUTTONDOWN:
             if len(self.field_corners) < 4:
                 self.field_corners.append((x, y))
-            # else:
-            #     self.
 
 
 
@@ -190,14 +192,17 @@ class Detection:
         ]
         self.trimmed_field = trimmed_field
 
+
 class VideoStream:
-    def __init__(self, url=None,image_path=None,video_path=None,target_fps=30):
+    def __init__(self, url=None, image_path=None, video_path=None, target_fps=30):
         self.url = url
         self.image_path = image_path
         self.video_path = video_path
         self.latest_frame = None
         self.stopped = False
-        if image_path is None :
+        self.lock = threading.Lock()  # Initialize a lock
+
+        if image_path is None:
             if video_path is None:
                 self.cap = cv2.VideoCapture(self.url)
             elif os.path.exists(video_path):
@@ -205,6 +210,7 @@ class VideoStream:
             else:
                 print("Video file does not exist.")
                 exit(0)
+
             self.frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             self.frame_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             self.thread = threading.Thread(target=self.update, daemon=True)
@@ -214,18 +220,16 @@ class VideoStream:
             self.latest_frame = cv2.imread(self.image_path)
             self.frame_width = self.latest_frame.shape[1]
             self.frame_height = self.latest_frame.shape[0]
-
         else:
             print("Image file does not exist.")
             exit(0)
 
-        # Start the thread to read frames
-    
     def update(self):
         while not self.stopped:
             if self.cap.isOpened():
                 ret, frame = self.cap.read()
                 if ret:
+                    # with self.lock:  # Lock access before updating
                     self.latest_frame = frame
                 else:
                     print("Failed to grab frame.")
@@ -235,12 +239,13 @@ class VideoStream:
                 print("Failed to open video stream.")
                 self.stop()
                 break
-            # time.sleep(1)  # Small delay to prevent excessive CPU usage
 
     def read(self):
-        return self.latest_frame
-    
+        frame = self.latest_frame
+        return frame.copy() if frame is not None else None
+
     def stop(self):
         self.stopped = True
         self.thread.join()
         self.cap.release()
+

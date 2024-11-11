@@ -21,8 +21,10 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     if display:
         cv2.namedWindow("Feed" )
         cv2.setMouseCallback("Feed",select_point)  
-    
-    _, _, goal_center_point, _ = detection.detect_aruco()
+    goal_center_point=None
+    while goal_center_point is None:
+        print("getting goal center point")
+        _, _, goal_center_point, _ = detection.detect_aruco()
     balls = None
     completed = False
     while True:
@@ -104,7 +106,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
 
             if bot:
                 bot.updatePosition()
-                bot.move(target_point,aquire_target=True)
+                bot.move(target_point,acquire_target=True)
             time.sleep(DELAY_AFTER_MOVEMENT)
 
             if bot_center_point is None:
@@ -112,7 +114,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 continue
             if bot:
                 bot.updatePosition()
-                bot.move(goal_point,aquire_target=False)
+                bot.move(goal_point,acquire_target=False)
             print("Goal reached!")
             time.sleep(DELAY_AFTER_MOVEMENT)
 
@@ -121,7 +123,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 continue
             if bot:
                 bot.updatePosition()
-                bot.move(target_point,aquire_target=False)
+                bot.move(target_point,acquire_target=False)
                 time.sleep(DELAY_AFTER_MOVEMENT)
             target_point, goal_point = None, None
             time.sleep(DELAY_AFTER_GOAL)
@@ -156,9 +158,13 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             bot_angle =None
             while True:
                 bot_angle, bot_center_point, _, _ = detection.detect_aruco()
-                if bot_angle is None:
+                if bot_angle is None and display:
                     print("Bot not found retrying")
-                else:
+                    cv2.circle(frame,bot_center_point,5,RED,-1)
+                    cv2.imshow('Feed',frame)
+                    cv2.waitKey(1)
+
+                elif display:
                     print(f"Bot angle:{bot_angle}, bot center point: {bot_center_point}")
                     frame = detection.video_stream.read()
                     cv2.circle(frame,bot_center_point,5,GREEN,-1)
