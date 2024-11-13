@@ -12,7 +12,8 @@ from util import calculate_angle_to_point,calculate_distance,point_at_distance_i
     find_closest_edge, find_perpendicular_point_from_point_on_line, find_closest_corner
 from const import BOT_ID, POST_ID, FIELD_LENGTH, FIELD_WIDTH, \
     TRIM_LENGTH, CORNER_TO_POST_LENGTH, BOT_MOVEMENT_TRIM_LENGTH,\
-        DEFAULT_POSITION_TO_POST_LENGTH
+        DEFAULT_POSITION_TO_POST_LENGTH, SLEEP_CORNER_SELECTION_LOOP, \
+        SLEEP_ARUCO_NOT_FOUND_RECALCULATE
 
 class Detection:
     def __init__(self,image_path=None, video_path=None):
@@ -163,7 +164,7 @@ class Detection:
                     break
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
-                time.sleep(0.5)
+                time.sleep(SLEEP_CORNER_SELECTION_LOOP)
 
 
         # Release the video capture and close all windows
@@ -236,7 +237,7 @@ class Detection:
         while goal_aruco_center is None:
             print("getting goal center point")
             _, _, goal_aruco_center, _ = self.detect_aruco()
-            time.sleep(0.2)
+            time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
 
         closest_edge, _, _ = find_closest_edge(goal_aruco_center, list(
             map(lambda x: x['edge'], side_edge_and_midpoint)))

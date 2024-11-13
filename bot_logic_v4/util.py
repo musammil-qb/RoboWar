@@ -60,6 +60,7 @@ def find_closest_edge(point, edges):
 
     return closest_edge, min_distance, closest_point_on_edge
 
+
 def find_perpendicular_point_from_point_on_line(edges, point_on_line, distance, external_point):
     x3, y3 = point_on_line
     (x1, y1), (x2, y2) = edges
@@ -94,12 +95,15 @@ def find_perpendicular_point_from_point_on_line(edges, point_on_line, distance, 
 
 def find_closest_corner(polygon_corners, point):
     closest_corners = []
-    
-    # For each corner, calculate the distance to g
+
     for i, corner in enumerate(polygon_corners):
         dist_to_point = calculate_distance(corner, point)
         closest_corners.append((i, dist_to_point))
-    
-    # Sort corners by distance to point
+
     closest_corners.sort(key=lambda x: x[1])
     return closest_corners[0][0]
+
+def is_point_inside_border(point, border_points):
+    # Test if the point is inside, on, or outside the polygon    
+    result = cv2.pointPolygonTest(border_points, point, False)
+    return result >= 0 

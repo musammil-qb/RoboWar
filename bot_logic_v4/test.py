@@ -6,7 +6,7 @@ from detection import Detection
 from bot import Bot
 from algorithm import algorithm
 from util import draw_polygons
-from const import BLUE, GREEN
+from const import BLUE, GREEN, SLEEP_ARUCO_NOT_FOUND_RECALCULATE
 
 def main(image_path=None, video_path=None, disable_bot=True,disable_algorithm=False):
 
@@ -29,7 +29,7 @@ def main(image_path=None, video_path=None, disable_bot=True,disable_algorithm=Fa
             if bot_angle is not None:
                 print(f"Bot angle: {bot_angle}, bot center point: {bot_center_point}")
                 break
-            time.sleep(0.5)
+            time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
         bot = Bot(bot_center_point, bot_angle, detection)
     else:
         print("Bot functionality is disabled.")

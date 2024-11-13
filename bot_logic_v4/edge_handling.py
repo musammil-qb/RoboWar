@@ -2,11 +2,7 @@ import cv2
 import numpy as np
 import math
 
-def is_point_inside_border_v2(point, border_points):
-    # Test if the point is inside, on, or outside the polygon
-    
-    result = cv2.pointPolygonTest(border_points, point, False)
-    return result >= 0 
+from util import is_point_inside_border
 
 # Function to find the closest side and return an inside point along it
 def find_parallel_point_inside_border(given_point, border_points, offset=40):
@@ -47,7 +43,7 @@ def find_parallel_point_inside_border(given_point, border_points, offset=40):
     inside_point = given_point + offset * perpendicular_vector
 
     # Ensure the point is inside the polygon using cv2.pointPolygonTest
-    is_inside = cv2.pointPolygonTest(border_points, tuple(inside_point), False) >= 0
+    is_inside = is_point_inside_border(tuple(inside_point),border_points)
 
     # If the calculated inside point is outside, decrease offset until it's inside
     while not is_inside and offset > 0 and offset < 200:
@@ -56,7 +52,7 @@ def find_parallel_point_inside_border(given_point, border_points, offset=40):
         else:
             offset -= 10
         inside_point = given_point + offset * perpendicular_vector
-        is_inside = cv2.pointPolygonTest(border_points, tuple(inside_point), False) >= 0
+        is_inside = is_point_inside_border(tuple(inside_point),border_points)
     return tuple(map(int, inside_point)), side_name
 
 

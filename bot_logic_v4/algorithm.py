@@ -3,10 +3,11 @@ import cv2
 import numpy as np
 
 
-from const import BLUE, GREEN, RED, DELAY_AFTER_GOAL, YELLOW, DELAY_AFTER_MOVEMENT
+from const import BLUE, GREEN, RED, SLEEP_AFTER_GOAL, YELLOW, SLEEP_AFTER_EACH_LOOP, \
+    SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, SLEEP_BEFORE_GOAL
 from targetDetection import filter_balls, choose_next_target_point
 from util import draw_polygons
-from edge_handling import is_point_inside_border_v2,find_parallel_point_inside_border
+from edge_handling import is_point_inside_border,find_parallel_point_inside_border
 
 
 target_point,selected_point = None, None
@@ -57,26 +58,19 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 cv2.circle(frame,selected_point,5,RED,5)
                 cv2.imshow('Feed', frame)
                 cv2.waitKey(1)
-            detection_object = detection.process_frame()
-            bot_angle, bot_center_point = detection_object['aruco']['bot_angle'], \
-                detection_object['aruco']['bot_center_point']
-            if bot_center_point is None:
-                print("Bot not found interrupt")
-                continue
             if bot:
                 bot.updatePosition()
                 bot.move(selected_point)
-                time.sleep(DELAY_AFTER_MOVEMENT)
+                time.sleep(SLEEP_AFTER_MOVEMENT)
                 bot.makeMovement(rotation_direction, 2000,edge_rotation=True)
             selected_point = None
-            edge_rotation = None
     
         detection_object = detection.process_frame()
         bot_center_point, balls =  \
             detection_object['aruco']['bot_center_point'], detection_object['yolo']['balls']    
         if any([balls == [] , goal_center_point is None , bot_center_point is None]) and not disable_algorithm:
             print(f"Detection failed goal post: {goal_center_point}, bot center point: {bot_center_point} no of balls:{len(balls)}")
-            time.sleep(1)
+            time.sleep(SLEEP_BALL_NOT_FOUND)
             continue
         
         if display:
@@ -111,36 +105,25 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 cv2.circle(frame, goal_point, 5, GREEN, -1)
                 cv2.imshow('Feed', frame)
                 cv2.waitKey(1)
-            time.sleep(0.5)
-            bot_angle, bot_center_point, _, _ = detection.detect_aruco()
-            if bot_center_point is None:
-                print("Bot not found interrupt")
-                continue
+            time.sleep(SLEEP_BEFORE_GOAL)
 
             if bot:
                 bot.updatePosition()
                 bot.move(target_point,acquire_target=True)
-            time.sleep(DELAY_AFTER_MOVEMENT)
+            time.sleep(SLEEP_AFTER_MOVEMENT)
 
-            bot_angle, bot_center_point, _, _ = detection.detect_aruco()
-            if bot_center_point is None:
-                print("Bot not found interrupt")
-                continue
             print("Goal reached!")
             if bot:
                 bot.updatePosition()
                 bot.move(goal_point,acquire_target=False)
-            time.sleep(DELAY_AFTER_MOVEMENT)
+            time.sleep(SLEEP_AFTER_MOVEMENT)
 
-            if bot_center_point is None:
-                print("Bot not found interrupt")
-                continue
             if bot:
                 bot.updatePosition()
                 bot.move(target_point,acquire_target=False)
-                time.sleep(DELAY_AFTER_MOVEMENT)
+                time.sleep(SLEEP_AFTER_MOVEMENT)
             target_point, goal_point = None, None
-            time.sleep(DELAY_AFTER_GOAL)
+            time.sleep(SLEEP_AFTER_GOAL)
         elif not disable_algorithm:
             # print("No extended points found within the trimmed field.")
             trimmed_field = np.array(detection.trimmed_field)
@@ -152,20 +135,30 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 target_point = next_target_point['target_point']
                 ball = next_target_point['ball']
                 next_viable_point, side_name = find_parallel_point_inside_border(target_point,field_corners)
-                if side_name != "right" or side_name != "left":
+                if side_name == "right" or side_name == "left":
                     midpoint = (int((next_viable_point[0] + ball[0])/2), int((next_viable_point[1] + ball[1])/2))
                     midpoint = next_viable_point + bot_offset * np.array([1,1])
-                    selected_point = (int(midpoint[0]), int(midpoint[1]))
+                    edge_point = (int(midpoint[0]), int(midpoint[1]))
                     rotation_direction = 'right' if side_name=='bottom' else 'left'
                     if display:
                         frame = detection.video_stream.read()
-                        cv2.circle(frame, selected_point, 5, GREEN, -1)
+                        cv2.circle(frame, edge_point, 5, RED, -1)
                         cv2.imshow('Feed',frame)
                         cv2.waitKey(1)
+                    if bot_center_point is None:
+                        print("Bot not found interrupt")
+                        continue
+                    if bot:
+                        bot.updatePosition()
+                        bot.move(edge_point)
+                        time.sleep(SLEEP_AFTER_MOVEMENT)
+                        bot.makeMovement(rotation_direction, 2000,edge_rotation=True)
+                else:
+                    print("No possible shots found")
+
         if not pressed_key:
             print("waiting for key interrupt")
-            # time.sleep(1)
-            pressed_key = cv2.waitKey(1)
+            pressed_key = cv2.waitKey(SLEEP_FOR_KEY_PRESS)
         if pressed_key == ord('q'):
             print("Exiting...")
             break
@@ -188,7 +181,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     cv2.circle(frame,bot_center_point,5,GREEN,-1)
                     cv2.imshow('Feed',frame)
                     cv2.waitKey(1)
-                time.sleep(0.3)
+                time.sleep(SLEEP_AFTER_EACH_LOOP)
 
             
 

@@ -2,10 +2,11 @@ import time
 import cv2
 import json
 
-from const import BLUE, GREEN, RED, DELAY_AFTER_GOAL, YELLOW, DELAY_AFTER_MOVEMENT
+from const import BLUE, GREEN, RED, SLEEP_AFTER_GOAL, YELLOW, SLEEP_AFTER_MOVEMENT, SLEEP_AFTER_EACH_LOOP
 from util import calculate_distance
 from detection import Detection
 from bot import Bot
+
 
 movement_dict = { 'f': 'forward', 'b': 'backward', 'l': 'left', 'r': 'right' }
 
@@ -46,11 +47,11 @@ def main():
             bot.move(selected_point,acquire_target=True)
             # rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = bot.calculateMovement(selected_point)
             # bot.makeMovement(rotation_direction,rotation_time_ms)
-            time.sleep(DELAY_AFTER_MOVEMENT)
+            time.sleep(SLEEP_AFTER_MOVEMENT)
             bot_angle,bot_center_point ,goal_center_point, _ = detection.detect_aruco()
             bot.updatePosition()
             bot.move(goal_center_point,acquire_target=False,orient_only=True)
-            time.sleep(DELAY_AFTER_MOVEMENT)
+            time.sleep(SLEEP_AFTER_MOVEMENT)
             detection_object = detection.process_frame()
             bot_angle, bot_center_point = detection_object['aruco']['bot_angle'], \
                 detection_object['aruco']['bot_center_point']
@@ -75,7 +76,6 @@ def main():
         elif pressed_key == ord('c'):
             print("Calibrating...")
             bot.calibrate(detection)
-            time.sleep(5)
         elif pressed_key == ord('i'):
             initial_bot_angle, initial_bot_center_point, _, _ = detection.detect_aruco()
             movement = input("Enter movement: ")
@@ -87,7 +87,7 @@ def main():
                 delay = value * bot.get_closest_rate(value,
                                   bot.rate_of_movement[movement_dict[movement]])
             bot.makeMovement(movement_dict[movement], delay)
-            time.sleep(DELAY_AFTER_MOVEMENT)
+            time.sleep(SLEEP_AFTER_MOVEMENT)
             finale_bot_angle, final_bot_center_point, _, _ = detection.detect_aruco()
             if initial_bot_center_point is not None and final_bot_center_point is not None:
                 distance_difference =calculate_distance(final_bot_center_point,initial_bot_center_point)
@@ -120,7 +120,7 @@ def main():
         if pressed_key:
             pressed_key = None
     
-        time.sleep(0.1)
+        time.sleep(SLEEP_AFTER_EACH_LOOP)
 
 if __name__ == "__main__":
     main()

@@ -33,7 +33,7 @@ class Bot:
         self.move(POINT_INFRONT_POST)
         self.move(GOAL_POST, orient_only=True)
 
-    def calibrate(self, detection):
+    def calibrate(self):
         calibrate_file = "calibrated_speed.json"
         rate_of_movement = {'forward': {}, 'backward': {}, 'right': {}, 'left': {}}
         if not os.path.exists(calibrate_file):
@@ -47,14 +47,14 @@ class Bot:
                 exit(0)
             # todo find offset values (angle difference for example)
             for sample_ms in BOT_CALIBRATION_ROTATION_MS_SAMPLES:
-                rate_of_movement['right'].update(self.caliberateMovement('right', sample_ms, detection))
-                rate_of_movement['left'].update(self.caliberateMovement('left', sample_ms, detection))
+                rate_of_movement['right'].update(self.caliberateMovement('right', sample_ms))
+                rate_of_movement['left'].update(self.caliberateMovement('left', sample_ms))
             self.goto_initial_postion()
             counter = 0
             for sample_ms in range(50,1350,30):
                 counter+=1
-                rate_of_movement['forward'].update(self.caliberateMovement('forward', sample_ms, detection))
-                rate_of_movement['backward'].update(self.caliberateMovement('backward', sample_ms, detection))
+                rate_of_movement['forward'].update(self.caliberateMovement('forward', sample_ms))
+                rate_of_movement['backward'].update(self.caliberateMovement('backward', sample_ms))
                 if counter %5 ==0:
                     self.goto_initial_postion()
             with open(calibrate_file, "w") as calibrationfile:
@@ -67,12 +67,13 @@ class Bot:
         return rate_of_movement
 
 
-    def caliberateMovement(self, direction, interval, detection):
+    def caliberateMovement(self, direction, interval):
         if direction in ['forward', 'backward']:
             initial_position, _ = self.getPositionAndAngle()
 
             self.makeMovement(direction, interval)
-            time.sleep(1)
+            time.sleep(interval)
+            time.sleep(SLEEP_AFTER_CALIBRATION_MOVEMENT)
 
             final_position, _ = self.getPositionAndAngle()
             print(f"initial position: {initial_position} Final position:{final_position}")
@@ -90,7 +91,7 @@ class Bot:
             _, initial_angle = self.getPositionAndAngle()
 
             self.makeMovement(direction, interval)
-            time.sleep(1)
+            time.sleep(SLEEP_AFTER_CALIBRATION_MOVEMENT)
 
             _ ,final_angle = self.getPositionAndAngle()
             print(f"initial angle: {initial_angle} Final angle: {final_angle}")
@@ -109,7 +110,7 @@ class Bot:
             bot_angle, bot_center_point, _, _ = self.detection.detect_aruco()
             if bot_center_point is None:
                 print("Bot position not found recalculating")
-                time.sleep(0.2)
+                time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
                 # TODO do inverse movement if not found for 10 sec 
         return bot_center_point, bot_angle
 
@@ -144,12 +145,12 @@ class Bot:
         self.makeMovement(rotation_direction, rotation_time_ms)
         if orient_only:
             pass
-            # time.sleep(0.3)
+            # time.sleep(MOVEMENT_CORRECTION_SLEEP)
             # self.updatePosition()
             # correction in angle
         else:
             self.makeMovement(travel_direction, travel_time_ms)
-            time.sleep(0.3)
+            time.sleep(MOVEMENT_CORRECTION_SLEEP)
             self.updatePosition()
             distance = calculate_distance(self.position, target_point)
             print(distance,acquire_target)
@@ -158,7 +159,7 @@ class Bot:
                 self.makeMovement(rotation_direction, rotation_time_ms)
                 self.makeMovement(travel_direction, travel_time_ms)
                 self.updatePosition()
-                time.sleep(0.3)
+                time.sleep(MOVEMENT_CORRECTION_SLEEP)
                 distance = calculate_distance(self.position, target_point)
                 print(f"Distance diffrence: {distance} correcting")
             
