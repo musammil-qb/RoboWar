@@ -15,7 +15,7 @@ ROTATION_SPEED = 4
 BOT_CALIBRATION_MOVEMENT_MS_SAMPLES = [50, 1400, 50]
 BOT_CALIBRATION_ROTATION_MS_SAMPLES = [20, 360, 10]
 
-# Sleep contants
+# Sleep constants
 SLEEP_BEFORE_GOAL = 0.5
 SLEEP_AFTER_GOAL = 0.5
 SLEEP_AFTER_MOVEMENT = 0.5
@@ -41,3 +41,6 @@ BOT_MOVEMENT_TRIM_LENGTH = 8
 MOVEMENT_REVERSE_DICT = {
     'left': 'right', 'right': 'left', 'forward': 'backward',
     'backward': 'forward','stop':'stop'}
+
+# flags
+MOVEMENT_CORRECTION_PERCENTAGES = [0.8,0.5,1] # each value percentageis a percentage
