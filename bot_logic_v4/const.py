@@ -1,3 +1,4 @@
+# Arucode Ids
 BOT_ID = 69
 POST_ID  = 92
 
@@ -10,24 +11,25 @@ YELLOW = (0, 165, 255)
 MOVEMENT_SPEED = 10
 ROTATION_SPEED = 4
 
-# Sample ms to set calibration
-BOT_CALIBRATION_MOVEMENT_MS_SAMPLES = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550,
-                                       600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350]
-BOT_CALIBRATION_ROTATION_MS_SAMPLES = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150,
-                                       160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350]
+# Sample ms to set calibration        [start, stop, step]
+BOT_CALIBRATION_MOVEMENT_MS_SAMPLES = [50, 1400, 50]
+BOT_CALIBRATION_ROTATION_MS_SAMPLES = [20, 360, 10]
 
+# Sleep contants
 SLEEP_BEFORE_GOAL = 0.5
 SLEEP_AFTER_GOAL = 0.5
 SLEEP_AFTER_MOVEMENT = 0.5
-# sleep when bot center or ball not found
-SLEEP_BALL_NOT_FOUND = 1
+SLEEP_BALL_NOT_FOUND = 1 # sleep when bot center or ball not found
 SLEEP_AFTER_EACH_LOOP=0.3
 SLEEP_FOR_KEY_PRESS = 500 # in ms
 SLEEP_AFTER_CALIBRATION_MOVEMENT = 1
 SLEEP_CORNER_SELECTION_LOOP = 0.5
 SLEEP_ARUCO_NOT_FOUND_RECALCULATE = 0.2
 MOVEMENT_CORRECTION_SLEEP = 0.3
+SLEEP_BEFORE_TAKING_FRAME = 0
 
+
+# measurement constants
 FIELD_LENGTH = 239
 FIELD_WIDTH = 182
 CORNER_TO_POST_LENGTH = 68
@@ -35,3 +37,7 @@ POST_LENGTH = 45
 DEFAULT_POSITION_TO_POST_LENGTH = 23
 TRIM_LENGTH = 15
 BOT_MOVEMENT_TRIM_LENGTH = 8
+
+MOVEMENT_REVERSE_DICT = {
+    'left': 'right', 'right': 'left', 'forward': 'backward',
+    'backward': 'forward','stop':'stop'}

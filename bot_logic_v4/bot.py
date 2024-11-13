@@ -13,7 +13,7 @@ class Bot:
             self.bot_ip = "192.168.32.103"  #TODO ip from input
         self.position = position # bot center point
         self.angle = angle
-        self.direction = 'stop'
+        self.movement = 'stop'
         self.speed = None
         self.setSpeed(MOVEMENT_SPEED)
         self.detection = detection 
@@ -46,12 +46,12 @@ class Bot:
                 print("temporary calibration not found exiting")
                 exit(0)
             # todo find offset values (angle difference for example)
-            for sample_ms in BOT_CALIBRATION_ROTATION_MS_SAMPLES:
+            for sample_ms in range(*BOT_CALIBRATION_ROTATION_MS_SAMPLES):
                 rate_of_movement['right'].update(self.caliberateMovement('right', sample_ms))
                 rate_of_movement['left'].update(self.caliberateMovement('left', sample_ms))
             self.goto_initial_postion()
             counter = 0
-            for sample_ms in range(50,1350,30):
+            for sample_ms in range(*BOT_CALIBRATION_MOVEMENT_MS_SAMPLES):
                 counter+=1
                 rate_of_movement['forward'].update(self.caliberateMovement('forward', sample_ms))
                 rate_of_movement['backward'].update(self.caliberateMovement('backward', sample_ms))
@@ -65,7 +65,6 @@ class Bot:
 
         self.rate_of_movement = rate_of_movement
         return rate_of_movement
-
 
     def caliberateMovement(self, direction, interval):
         if direction in ['forward', 'backward']:
@@ -102,16 +101,19 @@ class Bot:
 
             return {angle_traveled: rate}
 
-
-
     def getPositionAndAngle(self):
         bot_center_point =None
+        counter = 0
         while bot_center_point is None:
             bot_angle, bot_center_point, _, _ = self.detection.detect_aruco()
             if bot_center_point is None:
                 print("Bot position not found recalculating")
                 time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
                 # TODO do inverse movement if not found for 10 sec 
+                counter+=1
+                if counter % 10:
+                    # reverse last action to detect bot
+                    self.makeMovement(MOVEMENT_REVERSE_DICT[self.movement],50,update_movement=False)
         return bot_center_point, bot_angle
 
 
@@ -120,17 +122,21 @@ class Bot:
         self.position = bot_center_point
         self.angle = bot_angle
 
-    def makeMovement(self, movement, interval, edge_rotation=False):
+    def makeMovement(self, movement, interval, edge_rotation=False, update_movement=True):
         if movement in ['right', 'left'] and not edge_rotation:
             self.setSpeed(ROTATION_SPEED)
 
         res = requests.get(f"http://{self.bot_ip}/{movement}", params={"delay": interval})
+
         if movement in ['right', 'left'] and not edge_rotation:
             self.setSpeed(MOVEMENT_SPEED)
 
         if res.status_code ==200:
             print(f"moved {movement} time:{interval}")
-    
+            # TODO update only forward and backward?
+            if update_movement:
+                self.movement = movement
+
     def setSpeed(self, speed):
         self.speed = speed
         res = requests.get(f"http://{self.bot_ip}/speed", params={"speed": speed})
@@ -164,7 +170,7 @@ class Bot:
                 print(f"Distance diffrence: {distance} correcting")
             
         return "Completed"
-        
+
     def calculateMovement(self, target_point):
         bot_position, bot_angle = self.position, self.angle
         # Calculate distance and angle to target
@@ -199,13 +205,11 @@ class Bot:
         print(f"Move {travel_direction} to target, Distance: {distance_to_target:.2f} pixels, Time: {travel_time_ms:.2f} ms")
 
         return rotation_time_ms, rotation_direction, travel_direction, travel_time_ms
- 
+
     def get_closest_rate(self, target, rate_dict):
         # Find the key in rate closest to the target value
         closest_sample = min(rate_dict.keys(), key=lambda k: abs(int(float(k))- target))
         return rate_dict[closest_sample]
-
-
 
 
 if __name__ == '__main__':

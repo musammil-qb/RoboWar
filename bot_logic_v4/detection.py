@@ -13,7 +13,7 @@ from util import calculate_angle_to_point,calculate_distance,point_at_distance_i
 from const import BOT_ID, POST_ID, FIELD_LENGTH, FIELD_WIDTH, \
     TRIM_LENGTH, CORNER_TO_POST_LENGTH, BOT_MOVEMENT_TRIM_LENGTH,\
         DEFAULT_POSITION_TO_POST_LENGTH, SLEEP_CORNER_SELECTION_LOOP, \
-        SLEEP_ARUCO_NOT_FOUND_RECALCULATE
+        SLEEP_ARUCO_NOT_FOUND_RECALCULATE, SLEEP_BEFORE_TAKING_FRAME
 
 class Detection:
     def __init__(self,image_path=None, video_path=None):
@@ -48,6 +48,8 @@ class Detection:
 
 
     def process_frame(self):
+        if SLEEP_BEFORE_TAKING_FRAME:
+            time.sleep(SLEEP_BEFORE_TAKING_FRAME)
         frame = self.video_stream.read()
         balls, bots, arena = self.detect_yolo(frame)
         bot_angle, bot_center_point, goal_center_point, other_aruco_codes = self.detect_aruco(frame)
@@ -60,6 +62,8 @@ class Detection:
 
     def detect_yolo(self, frame=None):
         if frame is None:
+            if SLEEP_BEFORE_TAKING_FRAME:
+                time.sleep(SLEEP_BEFORE_TAKING_FRAME)
             frame = self.video_stream.read()
         model = self.model
         result = model.predict(frame, conf=0.5, verbose=False)
@@ -96,6 +100,8 @@ class Detection:
 
     def detect_aruco(self, frame=None):
         if frame is None:
+            if SLEEP_BEFORE_TAKING_FRAME:
+                time.sleep(SLEEP_BEFORE_TAKING_FRAME)
             frame = self.video_stream.read()
         markers_dict_np, markers_dict_integer = self.detect_aruco_markers(frame)
         bot_angle, bot_center_point = self.find_bot(markers_dict_integer.pop(BOT_ID)) if markers_dict_integer.get(BOT_ID) else (None,None)
@@ -151,6 +157,8 @@ class Detection:
             print("Select 4 corners of the field")
 
             while True:
+                if SLEEP_BEFORE_TAKING_FRAME:
+                    time.sleep(SLEEP_BEFORE_TAKING_FRAME)
                 frame = self.video_stream.read()
                 # Trace mouse movement
 
