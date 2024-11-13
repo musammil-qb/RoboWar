@@ -5,7 +5,7 @@ import numpy as np
 
 from const import BLUE, GREEN, RED, DELAY_AFTER_GOAL, YELLOW, DELAY_AFTER_MOVEMENT
 from targetDetection import filter_balls, choose_next_target_point
-from util import draw_rectangle
+from util import draw_polygons
 from edge_handling import is_point_inside_border_v2,find_parallel_point_inside_border
 
 
@@ -20,7 +20,6 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     global target_point,selected_point
     rotation_direction = None
 
-    print("Algorithm started!")
     if display:
         cv2.namedWindow("Feed" )
         cv2.setMouseCallback("Feed",select_point)  
@@ -28,21 +27,31 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     while goal_center_point is None:
         print("getting goal center point")
         _, _, goal_center_point, _ = detection.detect_aruco()
-    balls = None
+    balls, pressed_key = None, None
     completed = False
+
+    trimmed_field = detection.trimmed_field
+    field_corners = detection.field_corners
+    bot_movement_trimmed_field = detection.bot_movement_trimmed_field
+
     while True:
-        trimmed_field = detection.trimmed_field
-        field_corners = detection.field_corners
+        start_time = time.time()
         if display and test:
             frame = detection.video_stream.read() 
-            draw_rectangle(frame, trimmed_field, BLUE)
-            draw_rectangle(frame, field_corners, GREEN)
+            draw_polygons(frame, trimmed_field, BLUE)
+            draw_polygons(frame, field_corners, GREEN)
+            draw_polygons(frame, bot_movement_trimmed_field, RED)
+            cv2.circle(frame, detection.default_point,5, GREEN, -1)
+            cv2.circle(frame, detection.goal_posts['self']['post_center_point'],10, BLUE, 2)
+            cv2.circle(frame, detection.goal_posts['opponent']['post_center_point'],10, BLUE, 2)
+            cv2.circle(frame, detection.center_point,5, RED, -1)
+            cv2.line(frame, detection.goal_posts['self']['edge_points'][0],detection.goal_posts['self']['edge_points'][1],RED, 2)
+            cv2.line(frame, detection.goal_posts['opponent']['edge_points'][0],detection.goal_posts['opponent']['edge_points'][1],YELLOW, 2)
             cv2.imshow('Feed', frame)
             cv2.waitKey(1)
         if completed and image:
-            cv2.waitKey(1)
-            time.sleep(2)
-            continue
+            pressed_key = cv2.waitKey(0)
+            
         if selected_point is not None:
             if display:
                 cv2.circle(frame,selected_point,5,RED,5)
@@ -153,10 +162,10 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                         cv2.circle(frame, selected_point, 5, GREEN, -1)
                         cv2.imshow('Feed',frame)
                         cv2.waitKey(1)
-
-        print("waiting for key interrupt")
-        time.sleep(1)
-        pressed_key = cv2.waitKey(1)
+        if not pressed_key:
+            print("waiting for key interrupt")
+            # time.sleep(1)
+            pressed_key = cv2.waitKey(1)
         if pressed_key == ord('q'):
             print("Exiting...")
             break

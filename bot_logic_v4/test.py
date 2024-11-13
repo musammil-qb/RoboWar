@@ -5,7 +5,7 @@ import argparse
 from detection import Detection
 from bot import Bot
 from algorithm import algorithm
-from util import draw_rectangle
+from util import draw_polygons
 from const import BLUE, GREEN
 
 def main(image_path=None, video_path=None, disable_bot=True,disable_algorithm=False):

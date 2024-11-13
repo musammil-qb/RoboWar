@@ -4,7 +4,7 @@ import cv2
 from detection import Detection
 from bot import Bot
 from algorithm import algorithm
-from util import draw_rectangle
+from util import draw_polygons
 from const import BLUE, GREEN
 
 

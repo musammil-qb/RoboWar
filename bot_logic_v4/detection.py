@@ -8,8 +8,11 @@ import json
 import numpy as np 
 from ultralytics import YOLO
 
-from util import calculate_angle_to_point,calculate_distance
-from const import BOT_ID, POST_ID, BLUE
+from util import calculate_angle_to_point,calculate_distance,point_at_distance_in_a_line,\
+    find_closest_edge, find_perpendicular_point_from_point_on_line, find_closest_corner
+from const import BOT_ID, POST_ID, FIELD_LENGTH, FIELD_WIDTH, \
+    TRIM_LENGTH, CORNER_TO_POST_LENGTH, BOT_MOVEMENT_TRIM_LENGTH,\
+        DEFAULT_POSITION_TO_POST_LENGTH
 
 class Detection:
     def __init__(self,image_path=None, video_path=None):
@@ -24,7 +27,7 @@ class Detection:
         else:
             cam_ip = input("Enter camera ip: ")
             if not cam_ip:
-                cam_ip = "192.168.32.247"  #TODO ip from input
+                cam_ip = "192.168.32.247"
 
             stream_url = f'http://{cam_ip}:8080/video'
             self.video_stream = VideoStream(stream_url)
@@ -33,11 +36,13 @@ class Detection:
                 if self.video_stream.read() is not None:
                     break
             print("Video stream started!")
-        #TODO select field
         self.field_corners = []
         self.edge_line  = None
+        self.goal_posts = []
         self.select_field()
-        self.define_trimmed_field()
+        self.calculate_cm_pixel_rate()
+        self.find_interested_points()
+        self.define_trimmed_fields()
         print("Detection initialized!")
 
 
@@ -97,13 +102,6 @@ class Detection:
         self.detection_object['aruco'] = {'bot_angle': bot_angle, 'bot_center_point': bot_center_point,
                        'goal_center_point': goal_center_point, 'other_aruco codes': markers_dict_integer}
         return bot_angle, bot_center_point, goal_center_point, markers_dict_integer
-
-
-    def __del__(self):
-        print("exiting 1")
-        self.video_stream.stop()
-        print("exiting 2 ")
-        super().__del__()
 
     def detect_aruco_markers(self,frame, draw_corners=False):
         aruco_type = cv2.aruco.DICT_4X4_100
@@ -176,22 +174,114 @@ class Detection:
             if len(self.field_corners) < 4:
                 self.field_corners.append((x, y))
 
+    def calculate_cm_pixel_rate(self):
+        field_length = (calculate_distance(
+            self.field_corners[0], self.field_corners[1]) + \
+                calculate_distance(self.field_corners[2], self.field_corners[3]))/2
+        field_width = (calculate_distance(self.field_corners[1], self.field_corners[2]) + \
+                       calculate_distance(self.field_corners[0], self.field_corners[3])) / 2
+        self.cm_pixel_rate = ((field_length/FIELD_LENGTH) + (field_width/FIELD_WIDTH))/2
 
 
-    def define_trimmed_field(self):
+    def define_trimmed_fields(self):
         field_corners = self.field_corners
-        trim_factor = 0.03
-        trim_length = calculate_distance(field_corners[0], field_corners[1])*trim_factor
+        trim_length = TRIM_LENGTH * self.cm_pixel_rate
+        
+        goal_post_points = self.goal_posts['opponent']['edge_points']
+        closest_corner_index = [find_closest_corner(field_corners,goal_post_points[0]),
+                         find_closest_corner(field_corners,goal_post_points[1])]
+        p1, p2, p3, p4 = np.array(field_corners)
+        if min(closest_corner_index) == 0:
+            trimmed_field = [
+                goal_post_points[closest_corner_index.index(3)],
+                goal_post_points[closest_corner_index.index(0)],
+                (int(p1[0] + trim_length), int(p1[1] + trim_length)),
+                (int(p2[0] - trim_length), int(p2[1] + trim_length)),
+                (int(p3[0] - trim_length), int(p3[1] - trim_length)),
+                (int(p4[0] + trim_length), int(p4[1] - trim_length))
+                ]
+        else:
+            trimmed_field = [
+                (int(p1[0] + trim_length), int(p1[1] + trim_length)),
+                (int(p2[0] - trim_length), int(p2[1] + trim_length)),
+                goal_post_points[closest_corner_index.index(1)],
+                goal_post_points[closest_corner_index.index(2)],
+                (int(p3[0] - trim_length), int(p3[1] - trim_length)),
+                (int(p4[0] + trim_length), int(p4[1] - trim_length))
+                ]
+
+        self.trimmed_field = trimmed_field
+        trim_length = BOT_MOVEMENT_TRIM_LENGTH * self.cm_pixel_rate
         
         p1, p2, p3, p4 = np.array(field_corners)
-        trimmed_field = [
+        bot_movement_trimmed_field = [
             (int(p1[0] + trim_length), int(p1[1] + trim_length)),
             (int(p2[0] - trim_length), int(p2[1] + trim_length)),
             (int(p3[0] - trim_length), int(p3[1] - trim_length)),
             (int(p4[0] + trim_length), int(p4[1] - trim_length))
         ]
-        self.trimmed_field = trimmed_field
+        self.bot_movement_trimmed_field = bot_movement_trimmed_field
 
+
+    def find_interested_points(self):
+        length_from_corner_to_post = self.cm_pixel_rate * CORNER_TO_POST_LENGTH
+        side_edge_and_midpoint = [
+            {'post_center_point': (np.array(self.field_corners[1])+np.array(self.field_corners[2]))/2,
+             'edge': [self.field_corners[1], self.field_corners[2]]},
+            {'post_center_point': (np.array(self.field_corners[0])+np.array(self.field_corners[3]))/2,
+             'edge': [self.field_corners[0], self.field_corners[3]]}
+        ]
+
+        goal_aruco_center = None
+        while goal_aruco_center is None:
+            print("getting goal center point")
+            _, _, goal_aruco_center, _ = self.detect_aruco()
+            time.sleep(0.2)
+
+        closest_edge, _, _ = find_closest_edge(goal_aruco_center, list(
+            map(lambda x: x['edge'], side_edge_and_midpoint)))
+        if closest_edge[0] == side_edge_and_midpoint[0]['edge']:
+            opponent_edge = 0
+            self_edge = 1
+        else:
+            opponent_edge = 1
+            self_edge = 0
+
+        self.goal_posts = {
+            'self':  {
+                'post_center_point': list(map(int, side_edge_and_midpoint[self_edge]['post_center_point'])),
+                'edge_points': [
+                    point_at_distance_in_a_line(
+                        side_edge_and_midpoint[self_edge]['edge'][0],
+                        side_edge_and_midpoint[self_edge]['edge'][1], length_from_corner_to_post),
+                    point_at_distance_in_a_line(
+                        side_edge_and_midpoint[self_edge]['edge'][1],
+                        side_edge_and_midpoint[self_edge]['edge'][0], length_from_corner_to_post)
+                ]
+            }, 'opponent': {
+                'post_center_point': list(map(int, side_edge_and_midpoint[opponent_edge]['post_center_point'])),
+                'edge_points': [
+                    point_at_distance_in_a_line(
+                        side_edge_and_midpoint[opponent_edge]['edge'][0],
+                        side_edge_and_midpoint[opponent_edge]['edge'][1], length_from_corner_to_post),
+                    point_at_distance_in_a_line(
+                        side_edge_and_midpoint[opponent_edge]['edge'][1],
+                        side_edge_and_midpoint[opponent_edge]['edge'][0], length_from_corner_to_post)
+                ]
+            }}
+
+        default_point_distance = self.cm_pixel_rate * DEFAULT_POSITION_TO_POST_LENGTH
+        self.default_point = find_perpendicular_point_from_point_on_line(
+            self.goal_posts['self']['edge_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
+        center_point = (side_edge_and_midpoint[self_edge]['post_center_point'] +
+                        side_edge_and_midpoint[opponent_edge]['post_center_point'])/2
+        self.center_point = list(map(int, center_point))
+        self.default_point = find_perpendicular_point_from_point_on_line(
+            self.goal_posts['self']['edge_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
+
+
+    def __del__(self):
+        self.video_stream.stop()
 
 class VideoStream:
     def __init__(self, url=None, image_path=None, video_path=None, target_fps=30):
@@ -201,7 +291,7 @@ class VideoStream:
         self.latest_frame = None
         self.stopped = False
         self.lock = threading.Lock()  # Initialize a lock
-
+        self.cap = None
         if image_path is None:
             if video_path is None:
                 self.cap = cv2.VideoCapture(self.url)
@@ -246,6 +336,6 @@ class VideoStream:
 
     def stop(self):
         self.stopped = True
-        self.thread.join()
-        self.cap.release()
+        if self.cap:
+            self.cap.release()
 
