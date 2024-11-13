@@ -3,11 +3,12 @@ import cv2
 import numpy as np
 
 
-from const import BLUE, GREEN, RED, SLEEP_AFTER_GOAL, YELLOW, SLEEP_AFTER_EACH_LOOP, \
-    SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, SLEEP_BEFORE_GOAL
 from targetDetection import filter_balls, choose_next_target_point
 from util import draw_polygons
 from edge_handling import is_point_inside_border,find_parallel_point_inside_border
+from const import BLUE, GREEN, RED, SLEEP_AFTER_GOAL, YELLOW, SLEEP_AFTER_EACH_LOOP, \
+    SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, SLEEP_BEFORE_GOAL,\
+    EXTENDED_POINT_OFFSET
 
 
 target_point,selected_point = None, None
@@ -36,7 +37,8 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     bot_movement_trimmed_field = detection.bot_movement_trimmed_field
 
     while True:
-        start_time = time.time()
+        filtered_balls, intersection_points = [], []
+        next_target_point = None
         if display and test:
             frame = detection.video_stream.read() 
             draw_polygons(frame, trimmed_field, BLUE)
@@ -70,8 +72,9 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             detection_object['aruco']['bot_center_point'], detection_object['yolo']['balls']    
         if any([balls == [] , goal_center_point is None , bot_center_point is None]) and not disable_algorithm:
             print(f"Detection failed goal post: {goal_center_point}, bot center point: {bot_center_point} no of balls:{len(balls)}")
-            time.sleep(SLEEP_BALL_NOT_FOUND)
-            continue
+            if not pressed_key:
+                pressed_key = cv2.waitKey(SLEEP_BALL_NOT_FOUND)
+                continue
         
         if display:
             frame =  detection.video_stream.read()
@@ -81,8 +84,10 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             cv2.waitKey(1)
         print(f"Detection results goal post: {goal_center_point}, bot center point: {bot_center_point} no of balls:{len(balls)}")
 
-        if not disable_algorithm:
-            filtered_balls, intersection_points = filter_balls(trimmed_field,balls, goal_center_point ,buffer_distance=50)
+        if not disable_algorithm and balls:
+            filtered_balls, intersection_points = filter_balls(
+                trimmed_field, balls, goal_center_point,
+                buffer_distance=int(EXTENDED_POINT_OFFSET*detection.cm_pixel_rate))
             next_target_point = choose_next_target_point(intersection_points, bot_center_point)
 
         if display and test and not disable_algorithm:
@@ -129,7 +134,9 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             trimmed_field = np.array(detection.trimmed_field)
             field_corners = np.array(detection.field_corners)
             bot_offset = 1
-            filtered_balls, intersection_points = filter_balls(trimmed_field,balls, goal_center_point ,buffer_distance=50, disable_filter=True)
+            filtered_balls, intersection_points = filter_balls(
+                trimmed_field, balls, goal_center_point, buffer_distance=int(
+                    EXTENDED_POINT_OFFSET*detection.cm_pixel_rate), disable_filter=True)
             next_target_point = choose_next_target_point(intersection_points, bot_center_point)
             if next_target_point is not None:
                 target_point = next_target_point['target_point']

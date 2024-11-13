@@ -37,7 +37,7 @@ def calculate_extended_points(ball_pos,goal_center, buffer_distance=50,extension
 
     # Calculate the distances for E1 and E2
     dist_e1 = max(extension_factor_before * length, buffer_distance)
-    dist_e2 = max(extension_factor_after * length, buffer_distance)
+    dist_e2 = extension_factor_after * length
 
     # E1: Extended point before the ball
     x_e1 = int(ball_pos[0] - dist_e1 * dx)

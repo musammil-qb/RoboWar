@@ -71,6 +71,7 @@ class Detection:
         balls = []
         bot = None
         arena = None
+        corners = np.array(self.field_corners)
 
         for r in result:
             boxes = r.boxes
@@ -81,7 +82,7 @@ class Detection:
                     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
                     center_point_ball = (int((x1+x2)/2), int((y1+y2)/2))
-                    if is_point_inside_border(center_point_ball, self.field_corners):
+                    if is_point_inside_border(tuple(center_point_ball), corners):
                         balls.append(center_point_ball)
 
                 if int(box.cls[0]) == 1: # Detect bot
