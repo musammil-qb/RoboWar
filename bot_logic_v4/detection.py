@@ -9,7 +9,8 @@ import numpy as np
 from ultralytics import YOLO
 
 from util import calculate_angle_to_point,calculate_distance,point_at_distance_in_a_line,\
-    find_closest_edge, find_perpendicular_point_from_point_on_line, find_closest_corner
+    find_closest_edge, find_perpendicular_point_from_point_on_line, find_closest_corner,\
+    is_point_inside_border
 from const import BOT_ID, POST_ID, FIELD_LENGTH, FIELD_WIDTH, \
     TRIM_LENGTH, CORNER_TO_POST_LENGTH, BOT_MOVEMENT_TRIM_LENGTH,\
         DEFAULT_POSITION_TO_POST_LENGTH, SLEEP_CORNER_SELECTION_LOOP, \
@@ -80,8 +81,8 @@ class Detection:
                     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
                     center_point_ball = (int((x1+x2)/2), int((y1+y2)/2))
-
-                    balls.append(center_point_ball)
+                    if is_point_inside_border(center_point_ball, self.field_corners):
+                        balls.append(center_point_ball)
 
                 if int(box.cls[0]) == 1: # Detect bot
                     x1, y1, x2, y2 = box.xyxy[0]
