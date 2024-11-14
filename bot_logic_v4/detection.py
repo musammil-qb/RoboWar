@@ -38,6 +38,7 @@ class Detection:
                 if self.video_stream.read() is not None:
                     break
             print("Video stream started!")
+        self.current_mouse_position = None  # Track the mouse position for the last line
         self.field_corners = []
         self.edge_line  = None
         self.goal_posts = []
@@ -152,7 +153,6 @@ class Detection:
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
                 self.field_corners = json.load(f)
-                
         else:
             cv2.namedWindow("Feed")
             cv2.setMouseCallback("Feed", self.select_corners)
@@ -161,29 +161,47 @@ class Detection:
             while True:
                 if SLEEP_BEFORE_TAKING_FRAME:
                     time.sleep(SLEEP_BEFORE_TAKING_FRAME)
+                    
                 frame = self.video_stream.read()
-                # Trace mouse movement
 
+                # Draw selected points and lines connecting them
+                for i, point in enumerate(self.field_corners):
+                    # Draw each selected point
+                    cv2.circle(frame, point, 5, (0, 0, 255), -1)  # Red dot
+
+                    # Draw lines between consecutive points
+                    if i > 0:
+                        cv2.line(frame, self.field_corners[i - 1], point, (255, 0, 0), 2)  # Blue line between points
+                
+                # Draw line from the last selected point to the current mouse position
+                if len(self.field_corners) > 0 and self.current_mouse_position:
+                    last_point = self.field_corners[-1]
+                    cv2.line(frame, last_point, self.current_mouse_position, (0, 255, 0), 1)  # Green line to mouse
+                
                 # Display the video frame
                 cv2.imshow("Feed", frame)
 
-                # Break the loop on 'q' key press
                 if len(self.field_corners) == 4:
                     with open(file_path, 'w') as f:
                         json.dump(self.field_corners, f)
                     break
+
+                # Exit loop if 'q' is pressed
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
+
                 time.sleep(SLEEP_CORNER_SELECTION_LOOP)
+            
+            cv2.destroyAllWindows()
 
+    def select_corners(self, event, x, y, flags, param):
+        if event == cv2.EVENT_MOUSEMOVE:
+            self.current_mouse_position = (x, y)
 
-        # Release the video capture and close all windows
-        # cv2.destroyAllWindows()
-
-    def select_corners(self,event, x, y, flags, param):        
-        if event == cv2.EVENT_LBUTTONDOWN:
+        elif event == cv2.EVENT_LBUTTONDOWN:
             if len(self.field_corners) < 4:
                 self.field_corners.append((x, y))
+                print(f"Corner {len(self.field_corners)} selected at ({x}, {y})")
 
     def calculate_cm_pixel_rate(self):
         field_length = (calculate_distance(

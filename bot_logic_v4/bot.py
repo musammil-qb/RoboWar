@@ -25,7 +25,7 @@ class Bot:
             'time_of_command': None
         }
         if calibrate:
-            self.calibrate(detection)
+            self.calibrate()
 
     def goto_initial_postion(self):
         self.move(self.detection.default_point, acquire_target=False)

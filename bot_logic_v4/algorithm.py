@@ -30,7 +30,6 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
         print("getting goal center point")
         _, _, goal_center_point, _ = detection.detect_aruco()
     balls, pressed_key = None, None
-    completed = False
 
     trimmed_field = detection.trimmed_field
     field_corners = detection.field_corners
@@ -52,9 +51,6 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             cv2.line(frame, detection.goal_posts['opponent']['edge_points'][0],detection.goal_posts['opponent']['edge_points'][1],YELLOW, 2)
             cv2.imshow('Feed', frame)
             cv2.waitKey(1)
-        if completed and image:
-            pressed_key = cv2.waitKey(0)
-            
         if selected_point is not None:
             if display:
                 cv2.circle(frame,selected_point,5,RED,5)
@@ -129,8 +125,9 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 time.sleep(SLEEP_AFTER_MOVEMENT)
             target_point, goal_point = None, None
             time.sleep(SLEEP_AFTER_GOAL)
-        elif not disable_algorithm:
-            # print("No extended points found within the trimmed field.")
+        elif not disable_algorithm and next_target_point is None:
+
+            print("Targetting edge ball")
             trimmed_field = np.array(detection.trimmed_field)
             field_corners = np.array(detection.field_corners)
             bot_offset = 1
@@ -142,7 +139,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 target_point = next_target_point['target_point']
                 ball = next_target_point['ball']
                 next_viable_point, side_name = find_parallel_point_inside_border(target_point,field_corners)
-                if side_name == "right" or side_name == "left":
+                if side_name == "bottom" or side_name == "top":
                     midpoint = (int((next_viable_point[0] + ball[0])/2), int((next_viable_point[1] + ball[1])/2))
                     midpoint = next_viable_point + bot_offset * np.array([1,1])
                     edge_point = (int(midpoint[0]), int(midpoint[1]))
@@ -150,6 +147,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     if display:
                         frame = detection.video_stream.read()
                         cv2.circle(frame, edge_point, 5, RED, -1)
+                        cv2.putText(frame, side_name, edge_point, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
                         cv2.imshow('Feed',frame)
                         cv2.waitKey(1)
                     if bot_center_point is None:
@@ -163,6 +161,8 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 else:
                     print("No possible shots found")
 
+        if image:
+            pressed_key = cv2.waitKey(0)
         if not pressed_key:
             print("waiting for key interrupt")
             pressed_key = cv2.waitKey(SLEEP_FOR_KEY_PRESS)
@@ -190,6 +190,3 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     cv2.waitKey(1)
                 time.sleep(SLEEP_AFTER_EACH_LOOP)
 
-            
-
-        completed = True

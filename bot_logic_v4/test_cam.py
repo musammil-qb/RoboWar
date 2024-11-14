@@ -1,17 +1,27 @@
-from detection import Detection
+from detection import VideoStream
 from const import RED
 import cv2
 import time
 import random
  
-detection = Detection()
 
-width, height = detection.video_stream.frame_height,detection.video_stream.frame_width
 pressed_key = None
+cam_ip = input("Enter camera ip: ")
+if not cam_ip:
+    cam_ip = "192.168.32.247"
+stream_url = f'http://{cam_ip}:8080/video'
+video_stream = VideoStream(stream_url)
+
+while True:
+    if video_stream.read() is not None:
+        break
+print("Video stream started!")
+
+width, height = video_stream.frame_height,video_stream.frame_width
 while True:
     print(f"waiting for key press previous key:{pressed_key}")
     time.sleep(0.01)
-    frame = detection.video_stream.read()
+    frame = video_stream.read()
     cv2.imshow("Feed", frame)
     cv2.waitKey(1)
     pressed_key = cv2.waitKey(1)
