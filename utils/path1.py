@@ -121,6 +121,7 @@ def find_path(grid, start, end):
     while open_set:
         _, current = heapq.heappop(open_set)
 
+        
         if current == end:
             path = []
             while current in came_from:
