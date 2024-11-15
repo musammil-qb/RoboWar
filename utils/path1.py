@@ -118,7 +118,6 @@ def find_path(grid, start, end):
     g_score = {start: 0}
     f_score = {start: heuristic(start, end)}
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (-1, -1), (1, -1), (-1, 1)]
-
     while open_set:
         _, current = heapq.heappop(open_set)
 
