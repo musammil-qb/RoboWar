@@ -38,6 +38,7 @@ class Detection:
                 if self.video_stream.read() is not None:
                     break
             print("Video stream started!")
+
         self.current_mouse_position = None  # Track the mouse position for the last line
         self.field_corners = []
         self.edge_line  = None
@@ -216,7 +217,7 @@ class Detection:
         field_corners = self.field_corners
         trim_length = TRIM_LENGTH * self.cm_pixel_rate
         
-        goal_post_points = self.goal_posts['opponent']['edge_points']
+        goal_post_points = self.goal_posts['opponent']['goal_post_end_points']
         closest_corner_index = [find_closest_corner(field_corners,goal_post_points[0]),
                          find_closest_corner(field_corners,goal_post_points[1])]
         p1, p2, p3, p4 = np.array(field_corners)
@@ -256,20 +257,22 @@ class Detection:
         length_from_corner_to_post = self.cm_pixel_rate * CORNER_TO_POST_LENGTH
         side_edge_and_midpoint = [
             {'post_center_point': (np.array(self.field_corners[1])+np.array(self.field_corners[2]))/2,
-             'edge': [self.field_corners[1], self.field_corners[2]]},
-            {'post_center_point': (np.array(self.field_corners[0])+np.array(self.field_corners[3]))/2,
-             'edge': [self.field_corners[0], self.field_corners[3]]}
+             'edge': [tuple(self.field_corners[1]), tuple(self.field_corners[2])]},
+            {'post_center_point': (np.array(self.field_corners[3])+np.array(self.field_corners[0]))/2,
+             'edge': [tuple(self.field_corners[3]), tuple(self.field_corners[0])]}
         ]
-
         goal_aruco_center = None
         while goal_aruco_center is None:
             print("getting goal center point")
             _, _, goal_aruco_center, _ = self.detect_aruco()
             time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
+            frame = self.video_stream.latest_frame
+            cv2.imshow('frame', frame)
+            cv2.waitKey(1)
 
         closest_edge, _, _ = find_closest_edge(goal_aruco_center, list(
             map(lambda x: x['edge'], side_edge_and_midpoint)))
-        if closest_edge[0] == side_edge_and_midpoint[0]['edge']:
+        if closest_edge == side_edge_and_midpoint[0]['edge']:
             opponent_edge = 0
             self_edge = 1
         else:
@@ -279,34 +282,36 @@ class Detection:
         self.goal_posts = {
             'self':  {
                 'post_center_point': list(map(int, side_edge_and_midpoint[self_edge]['post_center_point'])),
-                'edge_points': [
+                'goal_post_end_points': [
                     point_at_distance_in_a_line(
                         side_edge_and_midpoint[self_edge]['edge'][0],
                         side_edge_and_midpoint[self_edge]['edge'][1], length_from_corner_to_post),
                     point_at_distance_in_a_line(
                         side_edge_and_midpoint[self_edge]['edge'][1],
                         side_edge_and_midpoint[self_edge]['edge'][0], length_from_corner_to_post)
-                ]
+                ],
+                'edge': side_edge_and_midpoint[self_edge]['edge']
             }, 'opponent': {
                 'post_center_point': list(map(int, side_edge_and_midpoint[opponent_edge]['post_center_point'])),
-                'edge_points': [
+                'goal_post_end_points': [
                     point_at_distance_in_a_line(
                         side_edge_and_midpoint[opponent_edge]['edge'][0],
                         side_edge_and_midpoint[opponent_edge]['edge'][1], length_from_corner_to_post),
                     point_at_distance_in_a_line(
                         side_edge_and_midpoint[opponent_edge]['edge'][1],
                         side_edge_and_midpoint[opponent_edge]['edge'][0], length_from_corner_to_post)
-                ]
+                ],
+                'edge': side_edge_and_midpoint[opponent_edge]['edge']
             }}
 
         default_point_distance = self.cm_pixel_rate * DEFAULT_POSITION_TO_POST_LENGTH
         self.default_point = find_perpendicular_point_from_point_on_line(
-            self.goal_posts['self']['edge_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
+            self.goal_posts['self']['goal_post_end_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
         center_point = (side_edge_and_midpoint[self_edge]['post_center_point'] +
                         side_edge_and_midpoint[opponent_edge]['post_center_point'])/2
         self.center_point = list(map(int, center_point))
         self.default_point = find_perpendicular_point_from_point_on_line(
-            self.goal_posts['self']['edge_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
+            self.goal_posts['self']['goal_post_end_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
 
 
     def __del__(self):

@@ -3,6 +3,7 @@ import cv2
 import math
 from detection import Detection
 
+from util import calculate_distance
 # extension_factor_before = 0.2  # Percentage for point before the ball
 # extension_factor_after = 0.1
 
@@ -19,8 +20,8 @@ def filter_balls(trimmed_field, balls, goal_center_point, buffer_distance=20, di
         elif disable_filter:
             filtered_balls.append(ball)
             intersection_points.append({'target_point':e1, 'goal_point':e2,'ball':ball})
-        else:
-            print(f"Ball at {ball} has an extended point outside the field; not targeted.")
+        # else:
+            # print(f"Ball at {ball} has an extended point outside the field; not targeted.")
 
 
     return filtered_balls, intersection_points
@@ -57,7 +58,7 @@ def is_point_in_polygon(point, polygon):
 
 def choose_next_target_point(intersection_points, bot_center_point):
     if intersection_points:
-        return min(intersection_points, key=lambda point: math.sqrt((point['target_point'][0] - bot_center_point[0])**2 + (point['target_point'][1] - bot_center_point[1])**2))
+        return min(intersection_points, key=lambda point: calculate_distance(point['target_point'], bot_center_point))
     return None
 
 if __name__ == '__main__':

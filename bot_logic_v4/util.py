@@ -55,7 +55,7 @@ def find_closest_edge(point, edges):
         distance, closest_point = distance_to_segment(px, py, x1, y1, x2, y2)
         if distance < min_distance:
             min_distance = distance
-            closest_edge = (x1, y1, x2, y2)
+            closest_edge = [(x1, y1), (x2, y2)]
             closest_point_on_edge = closest_point
 
     return closest_edge, min_distance, closest_point_on_edge
@@ -107,3 +107,12 @@ def is_point_inside_border(point, border_points):
     # Test if the point is inside, on, or outside the polygon    
     result = cv2.pointPolygonTest(border_points, point, False)
     return result >= 0 
+
+    # Determine the closest edge to the ball
+def distance_to_line(point, line_start, line_end):
+    line_vec = line_end - line_start
+    point_vec = point - line_start
+    proj = np.dot(point_vec, line_vec) / np.linalg.norm(line_vec)
+    proj = np.clip(proj / np.linalg.norm(line_vec), 0, 1)
+    closest_point = line_start + proj * line_vec
+    return np.linalg.norm(point - closest_point), closest_point

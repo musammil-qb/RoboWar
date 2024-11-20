@@ -4,11 +4,14 @@ import numpy as np
 
 
 from targetDetection import filter_balls, choose_next_target_point
-from util import draw_polygons
+from util import draw_polygons, calculate_distance
 from edge_handling import is_point_inside_border,find_parallel_point_inside_border
+from edge_logic_new import find_target_and_direction
+
 from const import BLUE, GREEN, RED, SLEEP_AFTER_GOAL, YELLOW, SLEEP_AFTER_EACH_LOOP, \
     SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, SLEEP_BEFORE_GOAL,\
-    EXTENDED_POINT_OFFSET
+    EXTENDED_POINT_OFFSET, EDGE_BALL_ROTATION_DISTANCE, SLEEP_AFTER_DISPLAYING,\
+    EDGE_BALL_MOVEMENT_DISTANCE
 
 
 target_point,selected_point = None, None
@@ -20,21 +23,22 @@ def select_point(event, x, y, flags, param):
 
 def algorithm(detection, bot, display=True, test=False, image=False, disable_algorithm=False):
     global target_point,selected_point
-    rotation_direction = None
+    edge_movement_direction = None
 
     if display:
         cv2.namedWindow("Feed" )
         cv2.setMouseCallback("Feed",select_point)  
-    goal_center_point=None
-    while goal_center_point is None:
-        print("getting goal center point")
-        _, _, goal_center_point, _ = detection.detect_aruco()
+    goal_center_point = detection.goal_posts['opponent']['post_center_point']
+    self_goal_center_point = detection.goal_posts['self']['post_center_point']
+    opponent_edge = detection.goal_posts['opponent']['edge']
+    self_edge = detection.goal_posts['self']['edge']
+
     balls, pressed_key = None, None
 
     trimmed_field = detection.trimmed_field
     field_corners = detection.field_corners
     bot_movement_trimmed_field = detection.bot_movement_trimmed_field
-
+    input("Enter to start")
     while True:
         filtered_balls, intersection_points = [], []
         next_target_point = None
@@ -45,39 +49,42 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             draw_polygons(frame, bot_movement_trimmed_field, RED)
             cv2.circle(frame, detection.default_point,5, GREEN, -1)
             cv2.circle(frame, detection.goal_posts['self']['post_center_point'],10, BLUE, 2)
-            cv2.circle(frame, detection.goal_posts['opponent']['post_center_point'],10, BLUE, 2)
+            cv2.circle(frame, goal_center_point,10, BLUE, 2)
             cv2.circle(frame, detection.center_point,5, RED, -1)
-            cv2.line(frame, detection.goal_posts['self']['edge_points'][0],detection.goal_posts['self']['edge_points'][1],RED, 2)
-            cv2.line(frame, detection.goal_posts['opponent']['edge_points'][0],detection.goal_posts['opponent']['edge_points'][1],YELLOW, 2)
+            cv2.line(frame, *detection.goal_posts['self']['goal_post_end_points'],RED, 2)
+            cv2.line(frame, *detection.goal_posts['opponent']['goal_post_end_points'],YELLOW, 2)
             cv2.imshow('Feed', frame)
-            cv2.waitKey(1)
+            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
         if selected_point is not None:
             if display:
                 cv2.circle(frame,selected_point,5,RED,5)
                 cv2.imshow('Feed', frame)
-                cv2.waitKey(1)
+                cv2.waitKey(SLEEP_AFTER_DISPLAYING)
             if bot:
                 bot.updatePosition()
                 bot.move(selected_point)
                 time.sleep(SLEEP_AFTER_MOVEMENT)
-                bot.makeMovement(rotation_direction, 2000,edge_rotation=True)
             selected_point = None
     
         detection_object = detection.process_frame()
         bot_center_point, balls =  \
             detection_object['aruco']['bot_center_point'], detection_object['yolo']['balls']    
-        if any([balls == [] , goal_center_point is None , bot_center_point is None]) and not disable_algorithm:
+        if not bot_center_point and bot:
+            bot.updatePosition()
+            bot_center_point = bot.position
+        if balls == []:
+            print(balls,disable_algorithm)
             print(f"Detection failed goal post: {goal_center_point}, bot center point: {bot_center_point} no of balls:{len(balls)}")
             if not pressed_key:
                 pressed_key = cv2.waitKey(SLEEP_BALL_NOT_FOUND)
                 continue
         
-        if display:
+        if display and test:
             frame =  detection.video_stream.read()
             for ball in balls:
                 cv2.circle(frame, ball,10, BLUE, 2)
             cv2.imshow('Feed', frame)
-            cv2.waitKey(1)
+            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
         print(f"Detection results goal post: {goal_center_point}, bot center point: {bot_center_point} no of balls:{len(balls)}")
 
         if not disable_algorithm and balls:
@@ -93,7 +100,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 cv2.circle(frame, possible_movement['target_point'], 5, RED, -1)
                 cv2.circle(frame, possible_movement['goal_point'], 5, YELLOW, -1)
             cv2.imshow('Feed', frame)
-            cv2.waitKey(1)
+            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
         if not disable_algorithm and next_target_point is not None:
             print('target locked')
             target_point = next_target_point['target_point']
@@ -102,24 +109,35 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             if display:
                 cv2.circle(frame, target_point, 5, BLUE, -1)
                 cv2.circle(frame, goal_point, 5, GREEN, -1)
-                cv2.circle(frame, target_point, 5, BLUE, -1)
-                cv2.circle(frame, goal_point, 5, GREEN, -1)
                 cv2.imshow('Feed', frame)
-                cv2.waitKey(1)
+                cv2.waitKey(SLEEP_AFTER_DISPLAYING)
             time.sleep(SLEEP_BEFORE_GOAL)
 
             if bot:
+                if display:
+                    cv2.circle(frame, target_point, 5, YELLOW, -1)
+                    cv2.imshow('Feed', frame)
+                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
                 bot.updatePosition()
                 bot.move(target_point,acquire_target=True)
             time.sleep(SLEEP_AFTER_MOVEMENT)
 
-            print("Goal reached!")
             if bot:
+                if display:
+                    cv2.circle(frame, goal_point, 5, YELLOW, -1)
+                    cv2.imshow('Feed', frame)
+                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
                 bot.updatePosition()
                 bot.move(goal_point,acquire_target=False)
             time.sleep(SLEEP_AFTER_MOVEMENT)
+            print("Goal reached!")
 
+            # Coming back to target point to avoid self goal 
             if bot:
+                if display:
+                    cv2.circle(frame, target_point, 5, YELLOW, -1)
+                    cv2.imshow('Feed', frame)
+                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
                 bot.updatePosition()
                 bot.move(target_point,acquire_target=False)
                 time.sleep(SLEEP_AFTER_MOVEMENT)
@@ -127,39 +145,29 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             time.sleep(SLEEP_AFTER_GOAL)
         elif not disable_algorithm and next_target_point is None:
 
-            print("Targetting edge ball")
-            trimmed_field = np.array(detection.trimmed_field)
-            field_corners = np.array(detection.field_corners)
-            bot_offset = 1
-            filtered_balls, intersection_points = filter_balls(
-                trimmed_field, balls, goal_center_point, buffer_distance=int(
-                    EXTENDED_POINT_OFFSET*detection.cm_pixel_rate), disable_filter=True)
-            next_target_point = choose_next_target_point(intersection_points, bot_center_point)
-            if next_target_point is not None:
-                target_point = next_target_point['target_point']
-                ball = next_target_point['ball']
-                next_viable_point, side_name = find_parallel_point_inside_border(target_point,field_corners)
-                if side_name == "bottom" or side_name == "top":
-                    midpoint = (int((next_viable_point[0] + ball[0])/2), int((next_viable_point[1] + ball[1])/2))
-                    midpoint = next_viable_point + bot_offset * np.array([1,1])
-                    edge_point = (int(midpoint[0]), int(midpoint[1]))
-                    rotation_direction = 'right' if side_name=='bottom' else 'left'
-                    if display:
-                        frame = detection.video_stream.read()
-                        cv2.circle(frame, edge_point, 5, RED, -1)
-                        cv2.putText(frame, side_name, edge_point, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-                        cv2.imshow('Feed',frame)
-                        cv2.waitKey(1)
-                    if bot_center_point is None:
-                        print("Bot not found interrupt")
-                        continue
-                    if bot:
+            print("Targeting edge ball")
+            if balls and bot_center_point:
+                closest_ball = min(balls, key=lambda ball: calculate_distance(ball, bot_center_point))
+                target_point, edge_movement_direction = find_target_and_direction(
+                    field_corners, closest_ball, goal_center_point,self_goal_center_point, self_edge, opponent_edge,
+                    detection.cm_pixel_rate * EDGE_BALL_ROTATION_DISTANCE, detection.cm_pixel_rate * EDGE_BALL_MOVEMENT_DISTANCE
+                )
+                if display:
+                    cv2.circle(frame, target_point, 5, YELLOW, -1)
+                    cv2.putText(frame, str(edge_movement_direction), target_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, BLUE, 2)
+                    cv2.imshow('Feed', frame)
+                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+                if bot:
+                    bot.updatePosition()
+                    bot.move(target_point)
+                    time.sleep(SLEEP_AFTER_MOVEMENT)
+                    if edge_movement_direction in ["right","left"]:
+                        bot.makeMovement(edge_movement_direction, 2000,edge_rotation=True)
+                    else:
+                        bot.move(ball)
                         bot.updatePosition()
-                        bot.move(edge_point)
-                        time.sleep(SLEEP_AFTER_MOVEMENT)
-                        bot.makeMovement(rotation_direction, 2000,edge_rotation=True)
-                else:
-                    print("No possible shots found")
+            else:
+                print("No possible shots found")
 
         if image:
             pressed_key = cv2.waitKey(0)
@@ -180,13 +188,13 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     print("Bot not found retrying")
                     cv2.circle(frame,bot_center_point,5,RED,-1)
                     cv2.imshow('Feed',frame)
-                    cv2.waitKey(1)
+                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
 
                 elif display:
                     print(f"Bot angle:{bot_angle}, bot center point: {bot_center_point}")
                     frame = detection.video_stream.read()
                     cv2.circle(frame,bot_center_point,5,GREEN,-1)
                     cv2.imshow('Feed',frame)
-                    cv2.waitKey(1)
+                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
                 time.sleep(SLEEP_AFTER_EACH_LOOP)
 

@@ -28,6 +28,8 @@ class Bot:
             self.calibrate()
 
     def goto_initial_postion(self):
+        input("reset to default location")
+        return
         self.move(self.detection.default_point, acquire_target=False)
         time.sleep(SLEEP_AFTER_MOVEMENT)
         self.move(self.detection.goal_posts['opponent']['post_center_point'],
@@ -49,6 +51,8 @@ class Bot:
             for sample_ms in range(*BOT_CALIBRATION_ROTATION_MS_SAMPLES):
                 rate_of_movement['right'].update(self.caliberateMovement('right', sample_ms))
                 rate_of_movement['left'].update(self.caliberateMovement('left', sample_ms))
+            with open(calibrate_file, "w") as calibrationfile:
+                json.dump(rate_of_movement, calibrationfile)
             self.goto_initial_postion()
             counter = 0
             for sample_ms in range(*BOT_CALIBRATION_MOVEMENT_MS_SAMPLES):
@@ -71,7 +75,6 @@ class Bot:
             initial_position, _ = self.getPositionAndAngle()
 
             self.makeMovement(direction, interval)
-            time.sleep(interval)
             time.sleep(SLEEP_AFTER_CALIBRATION_MOVEMENT)
 
             final_position, _ = self.getPositionAndAngle()
