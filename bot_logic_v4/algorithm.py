@@ -164,7 +164,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     if edge_movement_direction in ["right","left"]:
                         bot.makeMovement(edge_movement_direction, 2000,edge_rotation=True)
                     else:
-                        bot.move(ball)
+                        bot.move(closest_ball)
                         bot.updatePosition()
             else:
                 print("No possible shots found")
@@ -189,7 +189,6 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     cv2.circle(frame,bot_center_point,5,RED,-1)
                     cv2.imshow('Feed',frame)
                     cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-
                 elif display:
                     print(f"Bot angle:{bot_angle}, bot center point: {bot_center_point}")
                     frame = detection.video_stream.read()
