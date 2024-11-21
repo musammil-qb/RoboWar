@@ -14,7 +14,7 @@ from util import calculate_angle_to_point,calculate_distance,point_at_distance_i
 from const import BOT_ID, POST_ID, FIELD_LENGTH, FIELD_WIDTH, \
     TRIM_LENGTH, CORNER_TO_POST_LENGTH, BOT_MOVEMENT_TRIM_LENGTH,\
         DEFAULT_POSITION_TO_POST_LENGTH, SLEEP_CORNER_SELECTION_LOOP, \
-        SLEEP_ARUCO_NOT_FOUND_RECALCULATE, SLEEP_BEFORE_TAKING_FRAME
+        SLEEP_ARUCO_NOT_FOUND_RECALCULATE, SLEEP_BEFORE_TAKING_FRAME,SLEEP_AFTER_DISPLAYING
 
 class Detection:
     def __init__(self,image_path=None, video_path=None):
@@ -29,7 +29,7 @@ class Detection:
         else:
             cam_ip = input("Enter camera ip: ")
             if not cam_ip:
-                cam_ip = "192.168.32.247"
+                cam_ip = "192.168.195.175"
 
             stream_url = f'http://{cam_ip}:8080/video'
             self.video_stream = VideoStream(stream_url)
@@ -111,7 +111,7 @@ class Detection:
         bot_angle, bot_center_point = self.find_bot(markers_dict_integer.pop(BOT_ID)) if markers_dict_integer.get(BOT_ID) else (None,None)
         _, goal_center_point = self.find_bot(markers_dict_integer.pop(POST_ID)) if markers_dict_integer.get(POST_ID) else (None,None)
         self.detection_object['aruco'] = {'bot_angle': bot_angle, 'bot_center_point': bot_center_point,
-                       'goal_center_point': goal_center_point, 'other_aruco codes': markers_dict_integer}
+                       'goal_center_point': goal_center_point, 'other_aruco_codes': markers_dict_integer}
         return bot_angle, bot_center_point, goal_center_point, markers_dict_integer
 
     def detect_aruco_markers(self,frame, draw_corners=False):
@@ -267,9 +267,9 @@ class Detection:
             _, _, goal_aruco_center, _ = self.detect_aruco()
             time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
             frame = self.video_stream.latest_frame
-            cv2.imshow('frame', frame)
-            cv2.waitKey(1)
-
+            cv2.imshow('goal center finding', frame)
+            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+        cv2.destroyWindow('goal center finding')
         closest_edge, _, _ = find_closest_edge(goal_aruco_center, list(
             map(lambda x: x['edge'], side_edge_and_midpoint)))
         if closest_edge == side_edge_and_midpoint[0]['edge']:

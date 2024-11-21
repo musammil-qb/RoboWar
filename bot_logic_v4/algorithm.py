@@ -1,17 +1,17 @@
 import time
 import cv2
-import numpy as np
-
+from random import randint
 
 from targetDetection import filter_balls, choose_next_target_point
 from util import draw_polygons, calculate_distance
-from edge_handling import is_point_inside_border,find_parallel_point_inside_border
 from edge_logic_new import find_target_and_direction
+from random_movement_points import get_forward_goal_point, get_defense_points
 
 from const import BLUE, GREEN, RED, SLEEP_AFTER_GOAL, YELLOW, SLEEP_AFTER_EACH_LOOP, \
     SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, SLEEP_BEFORE_GOAL,\
     EXTENDED_POINT_OFFSET, EDGE_BALL_ROTATION_DISTANCE, SLEEP_AFTER_DISPLAYING,\
-    EDGE_BALL_MOVEMENT_DISTANCE
+    EDGE_BALL_MOVEMENT_DISTANCE, SLEEP_AFTER_DEFENSE,RANDOM_MOVEMENT_DELAY_RANGE,\
+    RANDOM_MOVEMENT_SPEED, RANDOM_MOVEMENT_DIRECTIONS
 
 
 target_point,selected_point = None, None
@@ -38,7 +38,48 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     trimmed_field = detection.trimmed_field
     field_corners = detection.field_corners
     bot_movement_trimmed_field = detection.bot_movement_trimmed_field
-    input("Enter to start")
+    strategy = input("Enter staring strategy to start: ")
+    if strategy =='f':
+        frame = detection.video_stream.read()
+        initial_movement_point = get_forward_goal_point(detection)
+        aruco = False
+        if aruco:
+            # if arucode works
+            bot.updatePosition()
+            bot.move(initial_movement_point,acquire_target=False)
+            bot.updatePosition()
+            bot.move(detection.default_point,acquire_target=False)
+        else:
+            # bot
+            bot.makeMovement('forward',1000)
+            bot.makeMovement('backward',1000)
+        cv2.imshow('Feed', frame)
+        cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+    elif strategy == 'd':
+        frame = detection.video_stream.read()
+        defense_point_1, defense_point_2 = get_defense_points(detection)
+        cv2.circle(frame, defense_point_1,5, YELLOW, -1)  
+        cv2.circle(frame, defense_point_2,5, YELLOW, -1)  
+        cv2.imshow('Feed', frame)
+        cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+        while True:
+            bot.updatePosition()
+            bot.move(defense_point_1, acquire_target=False)
+            bot.updatePosition()
+            bot.move(defense_point_2, acquire_target=False)
+            bot.updatePosition()
+            bot.move(detection.default_point, acquire_target=False)
+            bot.updatePosition()
+            time.sleep(SLEEP_AFTER_DEFENSE)
+    elif strategy == 'r':
+        bot.setSpeed(RANDOM_MOVEMENT_SPEED)
+        while True:
+            random_movement = RANDOM_MOVEMENT_DIRECTIONS[randint(0,len(RANDOM_MOVEMENT_DIRECTIONS)-1)]
+            random_delay = randint(*RANDOM_MOVEMENT_DELAY_RANGE)
+            bot.makeMovement(random_movement, random_delay)
+            time.sleep(SLEEP_AFTER_MOVEMENT)
+
+    edge_counter = 0
     while True:
         filtered_balls, intersection_points = [], []
         next_target_point = None
@@ -65,7 +106,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 bot.move(selected_point)
                 time.sleep(SLEEP_AFTER_MOVEMENT)
             selected_point = None
-    
+
         detection_object = detection.process_frame()
         bot_center_point, balls =  \
             detection_object['aruco']['bot_center_point'], detection_object['yolo']['balls']    
@@ -124,11 +165,20 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
 
             if bot:
                 if display:
+                    cv2.circle(frame, target_point, 5, YELLOW, -1)
+                    cv2.imshow('Feed', frame)
+                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+                bot.updatePosition()
+                bot.move(goal_point,orient_only=True)
+            time.sleep(SLEEP_AFTER_MOVEMENT)
+
+            if bot:
+                if display:
                     cv2.circle(frame, goal_point, 5, YELLOW, -1)
                     cv2.imshow('Feed', frame)
                     cv2.waitKey(SLEEP_AFTER_DISPLAYING)
                 bot.updatePosition()
-                bot.move(goal_point,acquire_target=False)
+                bot.move(goal_point,ram=True)
             time.sleep(SLEEP_AFTER_MOVEMENT)
             print("Goal reached!")
 
@@ -143,8 +193,10 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 time.sleep(SLEEP_AFTER_MOVEMENT)
             target_point, goal_point = None, None
             time.sleep(SLEEP_AFTER_GOAL)
-        elif not disable_algorithm and next_target_point is None:
+            edge_counter = 0
 
+        elif not disable_algorithm and next_target_point is None and edge_counter <=5:
+            edge_counter += 1
             print("Targeting edge ball")
             if balls and bot_center_point:
                 closest_ball = min(balls, key=lambda ball: calculate_distance(ball, bot_center_point))
@@ -168,7 +220,12 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                         bot.updatePosition()
             else:
                 print("No possible shots found")
-
+        else:
+            print("go to default location")
+            bot.updatePosition()
+            bot.move(detection.default_point)
+            edge_counter = 0
+        print("loop end")
         if image:
             pressed_key = cv2.waitKey(0)
         if not pressed_key:
