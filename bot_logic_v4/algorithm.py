@@ -6,12 +6,13 @@ from targetDetection import filter_balls, choose_next_target_point
 from util import draw_polygons, calculate_distance
 from edge_logic_new import find_target_and_direction
 from random_movement_points import get_forward_goal_point, get_defense_points
+from collision_avoidance import find_pit_stop_to_avoid_ball, is_collision_chance_closest_point
 
 from const import BLUE, GREEN, RED, SLEEP_AFTER_GOAL, YELLOW, SLEEP_AFTER_EACH_LOOP, \
     SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, SLEEP_BEFORE_GOAL,\
     EXTENDED_POINT_OFFSET, EDGE_BALL_ROTATION_DISTANCE, SLEEP_AFTER_DISPLAYING,\
     EDGE_BALL_MOVEMENT_DISTANCE, SLEEP_AFTER_DEFENSE,RANDOM_MOVEMENT_DELAY_RANGE,\
-    RANDOM_MOVEMENT_SPEED, RANDOM_MOVEMENT_DIRECTIONS
+    RANDOM_MOVEMENT_SPEED, RANDOM_MOVEMENT_DIRECTIONS, GREY
 
 
 target_point,selected_point = None, None
@@ -146,19 +147,37 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             print('target locked')
             target_point = next_target_point['target_point']
             goal_point = next_target_point['goal_point']
-            frame = detection.video_stream.read()
+            ball = next_target_point['ball']
             if display:
+                frame = detection.video_stream.read()
                 cv2.circle(frame, target_point, 5, BLUE, -1)
                 cv2.circle(frame, goal_point, 5, GREEN, -1)
                 cv2.imshow('Feed', frame)
                 cv2.waitKey(SLEEP_AFTER_DISPLAYING)
             time.sleep(SLEEP_BEFORE_GOAL)
-
-            if bot:
+            is_collision_chance, closest_point_on_line = is_collision_chance_closest_point(
+                bot_center_point, target_point, ball, detection.cm_pixel_rate)
+            if is_collision_chance:
+                pit_stop = find_pit_stop_to_avoid_ball(
+                    bot_center_point, target_point, closest_point_on_line, bot_movement_trimmed_field, detection.cm_pixel_rate)
+            if is_collision_chance:
+                    cv2.circle(frame, (int(pit_stop[0]),int(pit_stop[1])), 5, RED, -1)
+                    cv2.circle(frame, target_point, 5, YELLOW, -1)
+                    cv2.imshow('Feed', frame)
+                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+            if bot and not is_collision_chance:
+                print("1")
                 if display:
                     cv2.circle(frame, target_point, 5, YELLOW, -1)
                     cv2.imshow('Feed', frame)
                     cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+                bot.updatePosition()
+                bot.move(target_point,acquire_target=True)
+            elif bot:
+                print("2")
+                bot.updatePosition()
+                bot.move(pit_stop,acquire_target=False)
+                time.sleep(SLEEP_AFTER_MOVEMENT)
                 bot.updatePosition()
                 bot.move(target_point,acquire_target=True)
             time.sleep(SLEEP_AFTER_MOVEMENT)

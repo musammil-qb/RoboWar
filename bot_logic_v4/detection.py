@@ -9,7 +9,7 @@ import numpy as np
 from ultralytics import YOLO
 
 from util import calculate_angle_to_point,calculate_distance,point_at_distance_in_a_line,\
-    find_closest_edge, find_perpendicular_point_from_point_on_line, find_closest_corner,\
+    find_closest_edge, find_perpendicular_point_from_point_on_line_closer_to_external_point, find_closest_corner,\
     is_point_inside_border
 from const import BOT_ID, POST_ID, FIELD_LENGTH, FIELD_WIDTH, \
     TRIM_LENGTH, CORNER_TO_POST_LENGTH, BOT_MOVEMENT_TRIM_LENGTH,\
@@ -305,12 +305,12 @@ class Detection:
             }}
 
         default_point_distance = self.cm_pixel_rate * DEFAULT_POSITION_TO_POST_LENGTH
-        self.default_point = find_perpendicular_point_from_point_on_line(
+        self.default_point = find_perpendicular_point_from_point_on_line_closer_to_external_point(
             self.goal_posts['self']['goal_post_end_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
         center_point = (side_edge_and_midpoint[self_edge]['post_center_point'] +
                         side_edge_and_midpoint[opponent_edge]['post_center_point'])/2
         self.center_point = list(map(int, center_point))
-        self.default_point = find_perpendicular_point_from_point_on_line(
+        self.default_point = find_perpendicular_point_from_point_on_line_closer_to_external_point(
             self.goal_posts['self']['goal_post_end_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
 
 

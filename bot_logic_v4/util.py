@@ -60,8 +60,8 @@ def find_closest_edge(point, edges):
 
     return closest_edge, min_distance, closest_point_on_edge
 
+def perpendicular_points_from_point_on_line_with_a_distance(edges, point_on_line, distance):
 
-def find_perpendicular_point_from_point_on_line(edges, point_on_line, distance, external_point):
     x3, y3 = point_on_line
     (x1, y1), (x2, y2) = edges
 
@@ -81,6 +81,11 @@ def find_perpendicular_point_from_point_on_line(edges, point_on_line, distance, 
     p1_y = y3 + distance * uy_perpendicular
     p2_x = x3 - distance * ux_perpendicular
     p2_y = y3 - distance * uy_perpendicular
+    return (p1_x, p1_y), (p2_x, p2_y)
+
+def find_perpendicular_point_from_point_on_line_closer_to_external_point(edges, point_on_line, distance, external_point):
+
+    (p1_x, p1_y), (p2_x, p2_y) = perpendicular_points_from_point_on_line_with_a_distance(edges, point_on_line, distance)
 
     # Calculate distances to the reference point
     ref_x,ref_y =  external_point
