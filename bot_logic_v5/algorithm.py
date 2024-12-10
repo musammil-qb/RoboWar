@@ -181,7 +181,6 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     cv2.imshow('Feed', frame)
                     cv2.waitKey(SLEEP_AFTER_DISPLAYING)
             if bot and not is_collision_chance:
-                print("1")
                 if display:
                     cv2.circle(frame, target_point, 5, YELLOW, -1)
                     cv2.imshow('Feed', frame)
@@ -189,7 +188,6 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 bot.updatePosition()
                 bot.move(target_point,acquire_target=True)
             elif bot:
-                print("2")
                 bot.updatePosition()
                 bot.move(pit_stop,acquire_target=False)
                 time.sleep(SLEEP_AFTER_MOVEMENT)
@@ -203,7 +201,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     cv2.imshow('Feed', frame)
                     cv2.waitKey(SLEEP_AFTER_DISPLAYING)
                 bot.updatePosition()
-                bot.move(goal_point,orient_only=True)
+                bot.move(goal_center_point,orient_only=True)
             time.sleep(SLEEP_AFTER_MOVEMENT)
 
             if bot:

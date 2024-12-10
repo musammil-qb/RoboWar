@@ -121,3 +121,11 @@ def distance_to_line(point, line_start, line_end):
     proj = np.clip(proj / np.linalg.norm(line_vec), 0, 1)
     closest_point = line_start + proj * line_vec
     return np.linalg.norm(point - closest_point), closest_point
+
+def map_rotation_range(value, old_min, old_max, new_min, new_max):
+    # Map the value from the old range to the new range
+    if value > old_max:
+        mapped_value =1
+    else:
+        mapped_value = new_min + ((value - old_min) * (new_max - new_min)) / (old_max - old_min)
+    return mapped_value
