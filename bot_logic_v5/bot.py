@@ -12,7 +12,7 @@ class Bot:
         # todo
         self.bot_ip = input("Enter Bot ip: ")
         if not self.bot_ip:
-            self.bot_ip = "192.168.195.103"  # TODO ip from input
+            self.bot_ip = "192.168.35.103"  # TODO ip from input
         self.position = position  # bot center point
         self.angle = angle
         self.movement = 'stop'
@@ -120,8 +120,9 @@ class Bot:
                         MOVEMENT_REVERSE_DICT[self.movement], 50, update_movement=False)
         return bot_center_point, bot_angle
 
-    def updatePosition(self):
-        bot_center_point, bot_angle = self.getPositionAndAngle()
+    def updatePosition(self,bot_center_point=None, bot_angle=None):
+        if bot_center_point is None:
+            bot_center_point, bot_angle = self.getPositionAndAngle()
         self.position = bot_center_point
         self.angle = bot_angle
 
@@ -154,19 +155,21 @@ class Bot:
         if orient_only:
             rotation_time_ms, rotation_direction, _, _, rotation_needed, distance_to_target=\
                 self.calculateMovement(target_point)
-            distance_to_target_in_cm = distance_to_target * self.detection.cm_per_pixel
+            distance_to_target_in_cm = distance_to_target / self.detection.cm_pixel_rate
             allowed_rotation_error = map_rotation_range(
-                distance_to_target_in_cm,0,250,*ORIENT_ROTATION_ERROR_ALLOWED)
-
-            while rotation_needed > allowed_rotation_error:
+                distance_to_target_in_cm,0,MIN_DISTANCE_FOR_ONE_DEGREE_CORRECTION,
+                *ORIENT_ROTATION_ERROR_ALLOWED)
+            print(f"Allowed rotation error: {allowed_rotation_error}\tDistance: {distance_to_target_in_cm} distance in pixel: {distance_to_target}\t rate:{self.detection.cm_pixel_rate}")
+            correction_count=0
+            while rotation_needed > allowed_rotation_error and correction_count < CORRECTION_LIMIT:
                 self.makeMovement(rotation_direction, rotation_time_ms)
+                time.sleep(MOVEMENT_CORRECTION_SLEEP)
                 self.updatePosition()
                 rotation_time_ms, rotation_direction, _, _, rotation_needed, distance_to_target=\
                 self.calculateMovement(target_point)
+                correction_count+=1
 
-            # time.sleep(MOVEMENT_CORRECTION_SLEEP)
-            # self.updatePosition()
-            # correction in angle
+
         elif ram:
             _, _, travel_direction, travel_time_ms, _, _ =\
         self.calculateMovement(target_point)
@@ -191,8 +194,8 @@ class Bot:
             time.sleep(MOVEMENT_CORRECTION_SLEEP)
             self.updatePosition()
             distance = calculate_distance(self.position, target_point)
-
-            while distance > MOVEMENT_ERROR_ALLOWED and acquire_target:
+            correction_count = 0
+            while distance > MOVEMENT_ERROR_ALLOWED and acquire_target and correction_count < CORRECTION_LIMIT:
                 rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ = \
                     self.calculateMovement(target_point)
                 self.makeMovement(rotation_direction, rotation_time_ms)
@@ -201,6 +204,7 @@ class Bot:
                 self.updatePosition()
                 distance = calculate_distance(self.position, target_point)
                 print(f"Distance diffrence: {distance} correcting")
+                correction_count+=1
         else:
             rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ =\
                   self.calculateMovement(target_point)

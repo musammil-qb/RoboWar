@@ -1,7 +1,7 @@
 import math
 import cv2
 import numpy as np
-from const import GREEN
+from const import GREEN,BALL_MOVEMENT_BUFFER
 
 # Function to calculate the distance between two points
 def calculate_distance(point1, point2):
@@ -129,3 +129,11 @@ def map_rotation_range(value, old_min, old_max, new_min, new_max):
     else:
         mapped_value = new_min + ((value - old_min) * (new_max - new_min)) / (old_max - old_min)
     return mapped_value
+
+def is_ball_moved(balls, target_ball,cm_pixel_rate):
+    ball_moved = True
+    for ball in balls:
+        distance = calculate_distance(ball,target_ball)/cm_pixel_rate
+        if  distance <= BALL_MOVEMENT_BUFFER:
+            ball_moved = False
+    return ball_moved

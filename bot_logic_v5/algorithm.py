@@ -3,7 +3,7 @@ import cv2
 from random import randint
 
 from targetDetection import filter_balls, choose_next_target_point
-from util import draw_polygons, calculate_distance
+from util import draw_polygons, calculate_distance, is_ball_moved
 from edge_logic_new import find_target_and_direction
 from random_movement_points import get_forward_goal_point, get_defense_points
 from collision_avoidance import find_pit_stop_to_avoid_ball, is_collision_chance_closest_point
@@ -124,13 +124,13 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             selected_point = None
 
         detection_object = detection.process_frame()
-        bot_center_point, balls =  \
+        bot_center_point, balls = \
             detection_object['aruco']['bot_center_point'], detection_object['yolo']['balls']    
         if not bot_center_point and bot:
-            bot.updatePosition()
+            bot.updatePosition(detection_object['aruco']['bot_center_point'],
+                               detection_object['aruco']['bot_angle'])
             bot_center_point = bot.position
         if balls == []:
-            print(balls,disable_algorithm)
             print(f"Detection failed goal post: {goal_center_point}, bot center point: {bot_center_point} no of balls:{len(balls)}")
             if not pressed_key:
                 pressed_key = cv2.waitKey(SLEEP_BALL_NOT_FOUND)
@@ -195,28 +195,44 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 bot.move(target_point,acquire_target=True)
             time.sleep(SLEEP_AFTER_MOVEMENT)
 
+            # input("test ball movement:")
+            detection_object = detection.process_frame()
+            if is_ball_moved(detection_object['yolo']['balls'], ball,detection.cm_pixel_rate):
+                # abort
+                print("ball moved")
+                continue
             if bot:
                 if display:
+                    # frame = detection.video_stream.read()
                     cv2.circle(frame, target_point, 5, YELLOW, -1)
                     cv2.imshow('Feed', frame)
                     cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-                bot.updatePosition()
+                bot.updatePosition(detection_object['aruco']['bot_center_point'],
+                               detection_object['aruco']['bot_angle'])
                 bot.move(goal_center_point,orient_only=True)
             time.sleep(SLEEP_AFTER_MOVEMENT)
-
+            # input("test ball movement:")
+            detection_object = detection.process_frame()
+            if is_ball_moved(detection_object['yolo']['balls'], ball,detection.cm_pixel_rate):
+                # abort
+                print("ball moved")
+                continue
             if bot:
                 if display:
+                    # frame = detection.video_stream.read()
                     cv2.circle(frame, goal_point, 5, YELLOW, -1)
                     cv2.imshow('Feed', frame)
                     cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-                bot.updatePosition()
+                bot.updatePosition(detection_object['aruco']['bot_center_point'],
+                               detection_object['aruco']['bot_angle'])
                 bot.move(goal_point,ram=True)
             time.sleep(SLEEP_AFTER_MOVEMENT)
             print("Goal reached!")
 
-            # Coming back to target point to avoid self goal 
+            # Coming back to target point to avoid self goal
             if bot:
                 if display:
+                    # frame = detection.video_stream.read()
                     cv2.circle(frame, target_point, 5, YELLOW, -1)
                     cv2.imshow('Feed', frame)
                     cv2.waitKey(SLEEP_AFTER_DISPLAYING)
@@ -257,6 +273,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             bot.updatePosition()
             bot.move(detection.default_point)
             edge_counter = 0
+        
         print("loop end")
         if image:
             pressed_key = cv2.waitKey(0)
