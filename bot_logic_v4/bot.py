@@ -194,8 +194,8 @@ class Bot:
                     self.calculateMovement(target_point)
                 self.makeMovement(rotation_direction, rotation_time_ms)
                 self.makeMovement(travel_direction, travel_time_ms)
-                self.updatePosition()
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
+                self.updatePosition()
                 distance = calculate_distance(self.position, target_point)
                 print(f"Distance diffrence: {distance} correcting")
         else:

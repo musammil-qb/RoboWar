@@ -12,7 +12,8 @@ from const import BLUE, GREEN, RED, SLEEP_AFTER_GOAL, YELLOW, SLEEP_AFTER_EACH_L
     SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, SLEEP_BEFORE_GOAL,\
     EXTENDED_POINT_OFFSET, EDGE_BALL_ROTATION_DISTANCE, SLEEP_AFTER_DISPLAYING,\
     EDGE_BALL_MOVEMENT_DISTANCE, SLEEP_AFTER_DEFENSE,RANDOM_MOVEMENT_DELAY_RANGE,\
-    RANDOM_MOVEMENT_SPEED, RANDOM_MOVEMENT_DIRECTIONS, GREY
+    RANDOM_MOVEMENT_SPEED, RANDOM_MOVEMENT_DIRECTIONS, GREY, FORWARD_MOVEMENT_DELAY,\
+    IS_ARUCO_WORKING, DEFENCE_INITIAL_MOVEMENTS, DEFENCE_LOOP_MOVEMENTS
 
 
 target_point,selected_point = None, None
@@ -42,36 +43,50 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     strategy = input("Enter staring strategy to start: ")
     if strategy =='f':
         frame = detection.video_stream.read()
-        initial_movement_point = get_forward_goal_point(detection)
-        aruco = False
-        if aruco:
-            # if arucode works
+        # if arucode works
+        if IS_ARUCO_WORKING:
+            initial_movement_point = get_forward_goal_point(detection)
             bot.updatePosition()
             bot.move(initial_movement_point,acquire_target=False)
             bot.updatePosition()
             bot.move(detection.default_point,acquire_target=False)
         else:
             # bot
-            bot.makeMovement('forward',1000)
-            bot.makeMovement('backward',1000)
+            bot.makeMovement('forward',FORWARD_MOVEMENT_DELAY)
+            bot.makeMovement('backward',FORWARD_MOVEMENT_DELAY)
         cv2.imshow('Feed', frame)
         cv2.waitKey(SLEEP_AFTER_DISPLAYING)
     elif strategy == 'd':
-        frame = detection.video_stream.read()
-        defense_point_1, defense_point_2 = get_defense_points(detection)
-        cv2.circle(frame, defense_point_1,5, YELLOW, -1)  
-        cv2.circle(frame, defense_point_2,5, YELLOW, -1)  
-        cv2.imshow('Feed', frame)
-        cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-        while True:
-            bot.updatePosition()
-            bot.move(defense_point_1, acquire_target=False)
-            bot.updatePosition()
-            bot.move(defense_point_2, acquire_target=False)
-            bot.updatePosition()
-            bot.move(detection.default_point, acquire_target=False)
-            bot.updatePosition()
-            time.sleep(SLEEP_AFTER_DEFENSE)
+        if IS_ARUCO_WORKING:
+            frame = detection.video_stream.read()
+            defense_point_1, defense_point_2 = get_defense_points(detection)
+            cv2.circle(frame, defense_point_1,5, YELLOW, -1)  
+            cv2.circle(frame, defense_point_2,5, YELLOW, -1)  
+            cv2.imshow('Feed', frame)
+            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+            while True:
+                bot.updatePosition()
+                bot.move(defense_point_1, acquire_target=False)
+                bot.updatePosition()
+                bot.move(defense_point_2, acquire_target=False)
+                bot.updatePosition()
+                bot.move(detection.default_point, acquire_target=False)
+                bot.updatePosition()
+                time.sleep(SLEEP_AFTER_DEFENSE)
+        else:
+            frame = detection.video_stream.read()
+            defense_point_1, defense_point_2 = get_defense_points(detection)
+            cv2.circle(frame, defense_point_1,5, YELLOW, -1)  
+            cv2.circle(frame, defense_point_2,5, YELLOW, -1)  
+            cv2.imshow('Feed', frame)
+            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+            bot.makeMovement(*DEFENCE_INITIAL_MOVEMENTS[0])
+            bot.makeMovement(*DEFENCE_INITIAL_MOVEMENTS[1])
+            while True:
+                bot.makeMovement(*DEFENCE_LOOP_MOVEMENTS[0])
+                bot.makeMovement(*DEFENCE_LOOP_MOVEMENTS[1])
+                time.sleep(SLEEP_AFTER_DEFENSE)
+
     elif strategy == 'r':
         bot.setSpeed(RANDOM_MOVEMENT_SPEED)
         while True:
