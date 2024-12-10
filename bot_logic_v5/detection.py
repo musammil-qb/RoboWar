@@ -9,15 +9,15 @@ import numpy as np
 from ultralytics import YOLO
 
 from util import calculate_angle_to_point,calculate_distance,point_at_distance_in_a_line,\
-    find_closest_edge, find_perpendicular_point_from_point_on_line, find_closest_corner,\
+    find_closest_edge, find_perpendicular_point_from_point_on_line_closer_to_external_point, find_closest_corner,\
     is_point_inside_border
 from const import BOT_ID, POST_ID, FIELD_LENGTH, FIELD_WIDTH, \
     TRIM_LENGTH, CORNER_TO_POST_LENGTH, BOT_MOVEMENT_TRIM_LENGTH,\
         DEFAULT_POSITION_TO_POST_LENGTH, SLEEP_CORNER_SELECTION_LOOP, \
-        SLEEP_ARUCO_NOT_FOUND_RECALCULATE, SLEEP_BEFORE_TAKING_FRAME
+        SLEEP_ARUCO_NOT_FOUND_RECALCULATE, SLEEP_BEFORE_TAKING_FRAME,SLEEP_AFTER_DISPLAYING
 
 class Detection:
-    def __init__(self,cam_ip,image_path=None, video_path=None):
+    def __init__(self,image_path=None, video_path=None):
         print("Initializing detection...")
         self.model = YOLO("model.pt")
         self.detection_object = {}
@@ -27,6 +27,10 @@ class Detection:
         elif video_path:
             self.video_stream = VideoStream(video_path=video_path, target_fps=30)
         else:
+            cam_ip = input("Enter camera ip: ")
+            if not cam_ip:
+                cam_ip = "192.168.195.175"
+
             stream_url = f'http://{cam_ip}:8080/video'
             self.video_stream = VideoStream(stream_url)
 
@@ -39,10 +43,10 @@ class Detection:
         self.field_corners = []
         self.edge_line  = None
         self.goal_posts = []
-        # self.select_field()
-        # self.calculate_cm_pixel_rate()
-        # self.find_interested_points()
-        # self.define_trimmed_fields()
+        self.select_field()
+        self.calculate_cm_pixel_rate()
+        self.find_interested_points()
+        self.define_trimmed_fields()
         print("Detection initialized!")
 
 
@@ -107,7 +111,7 @@ class Detection:
         bot_angle, bot_center_point = self.find_bot(markers_dict_integer.pop(BOT_ID)) if markers_dict_integer.get(BOT_ID) else (None,None)
         _, goal_center_point = self.find_bot(markers_dict_integer.pop(POST_ID)) if markers_dict_integer.get(POST_ID) else (None,None)
         self.detection_object['aruco'] = {'bot_angle': bot_angle, 'bot_center_point': bot_center_point,
-                       'goal_center_point': goal_center_point, 'other_aruco codes': markers_dict_integer}
+                       'goal_center_point': goal_center_point, 'other_aruco_codes': markers_dict_integer}
         return bot_angle, bot_center_point, goal_center_point, markers_dict_integer
 
     def detect_aruco_markers(self,frame, draw_corners=False):
@@ -263,9 +267,9 @@ class Detection:
             _, _, goal_aruco_center, _ = self.detect_aruco()
             time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
             frame = self.video_stream.latest_frame
-            cv2.imshow('frame', frame)
-            cv2.waitKey(1)
-        cv2.destroyWindow('frame')
+            cv2.imshow('goal center finding', frame)
+            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+        cv2.destroyWindow('goal center finding')
         closest_edge, _, _ = find_closest_edge(goal_aruco_center, list(
             map(lambda x: x['edge'], side_edge_and_midpoint)))
         if closest_edge == side_edge_and_midpoint[0]['edge']:
@@ -276,7 +280,7 @@ class Detection:
             self_edge = 0
 
         self.goal_posts = {
-            'opponent':  {
+            'self':  {
                 'post_center_point': list(map(int, side_edge_and_midpoint[self_edge]['post_center_point'])),
                 'goal_post_end_points': [
                     point_at_distance_in_a_line(
@@ -287,7 +291,7 @@ class Detection:
                         side_edge_and_midpoint[self_edge]['edge'][0], length_from_corner_to_post)
                 ],
                 'edge': side_edge_and_midpoint[self_edge]['edge']
-            }, 'self': {
+            }, 'opponent': {
                 'post_center_point': list(map(int, side_edge_and_midpoint[opponent_edge]['post_center_point'])),
                 'goal_post_end_points': [
                     point_at_distance_in_a_line(
@@ -301,32 +305,20 @@ class Detection:
             }}
 
         default_point_distance = self.cm_pixel_rate * DEFAULT_POSITION_TO_POST_LENGTH
-        self.default_point = find_perpendicular_point_from_point_on_line(
+        self.default_point = find_perpendicular_point_from_point_on_line_closer_to_external_point(
             self.goal_posts['self']['goal_post_end_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
         center_point = (side_edge_and_midpoint[self_edge]['post_center_point'] +
                         side_edge_and_midpoint[opponent_edge]['post_center_point'])/2
         self.center_point = list(map(int, center_point))
-        self.default_point = find_perpendicular_point_from_point_on_line(
+        self.default_point = find_perpendicular_point_from_point_on_line_closer_to_external_point(
             self.goal_posts['self']['goal_post_end_points'], self.goal_posts['self']['post_center_point'], default_point_distance, self.goal_posts['opponent']['post_center_point'])
-    def process_video(self,frame_queue,fps=30):
-        interval = 1.0 / fps  # Calculate the interval between frames
-        last_frame_time = time.time()
 
-        while True:
-            current_time = time.time()
-            if current_time - last_frame_time >= interval:
-                print(f"p1: {current_time}")
-                frame = self.video_stream.read(frame_queue)
-                last_frame_time = current_time
-            else:
-                # Sleep for the remaining time to maintain the desired FPS
-                time.sleep(interval - (current_time - last_frame_time))
 
     def __del__(self):
         self.video_stream.stop()
 
 class VideoStream:
-    def __init__(self,url=None, image_path=None, video_path=None, target_fps=30):
+    def __init__(self, url=None, image_path=None, video_path=None, target_fps=30):
         self.url = url
         self.image_path = image_path
         self.video_path = video_path
@@ -372,11 +364,9 @@ class VideoStream:
                 self.stop()
                 break
 
-    def read(self,frame_queue=None):
-        frame = self.latest_frame.copy() if self.latest_frame is not None else None
-        if frame is not None and frame_queue is not None:
-            frame_queue.put(frame)
-        return frame
+    def read(self):
+        frame = self.latest_frame
+        return frame.copy() if frame is not None else None
 
     def stop(self):
         self.stopped = True

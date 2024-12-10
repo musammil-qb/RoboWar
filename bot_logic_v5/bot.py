@@ -12,7 +12,7 @@ class Bot:
         # todo
         self.bot_ip = input("Enter Bot ip: ")
         if not self.bot_ip:
-            self.bot_ip = "192.168.32.103"  # TODO ip from input
+            self.bot_ip = "192.168.195.103"  # TODO ip from input
         self.position = position  # bot center point
         self.angle = angle
         self.movement = 'stop'
@@ -31,8 +31,7 @@ class Bot:
         input("reset to default location")
         return
         self.move(self.detection.default_point, acquire_target=False)
-        time.sleep(SLEEP_AFTER_MOVEMENT
-                   )
+        time.sleep(SLEEP_AFTER_MOVEMENT)
         self.move(self.detection.goal_posts['opponent']['post_center_point'],
                    orient_only=True)
 
@@ -43,8 +42,8 @@ class Bot:
             calibrate_temp_file = "calibrated_speed_temp.json"
             if os.path.exists(calibrate_temp_file):
                 with open(calibrate_temp_file, "r") as calibrationfile:
-                    rate_of_movement = json.load(calibrationfile)
-                    self.rate_of_movement = rate_of_movement
+                    rate_of_movement_temp = json.load(calibrationfile)
+                    self.rate_of_movement = rate_of_movement_temp
             else:
                 print("temporary calibration not found exiting")
                 exit(0)
@@ -147,30 +146,42 @@ class Bot:
         if res.status_code != 200:
             print("Bot movement failed communication issue")
 
-    def move(self, target_point, acquire_target=True, orient_only=False):
+    def move(self, target_point, acquire_target=True, orient_only=False,ram=False):
         if target_point is None or self.position is None:
             print(
                 f"target point or position failed target point:{target_point}  bot center point:{self.position}")
             return False
         # rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = self.calculateMovement(target_point)
         if orient_only:
-            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms =\
-                  self.calculateMovement(target_point)
-            self.makeMovement(rotation_direction, rotation_time_ms)
-            pass
+            rotation_time_ms, rotation_direction, _, _, rotation_needed=\
+                self.calculateMovement(target_point)
+            while rotation_needed > ORIENT_ROTATION_ERROR_ALOWED:
+                self.makeMovement(rotation_direction, rotation_time_ms)
+                self.updatePosition()
+                rotation_time_ms, rotation_direction, _, _, rotation_needed=\
+                self.calculateMovement(target_point)
+
             # time.sleep(MOVEMENT_CORRECTION_SLEEP)
             # self.updatePosition()
             # correction in angle
-        elif MOVEMENT_CORRECTION_PERCENTAGES:
+        elif ram:
+            _, _, travel_direction, travel_time_ms,_ =\
+        self.calculateMovement(target_point)
+            self.makeMovement(travel_direction, travel_time_ms)
+            time.sleep(MOVEMENT_CORRECTION_SLEEP)
+            self.updatePosition()
+        elif MOVEMENT_CORRECTION_PERCENTAGES and acquire_target:
+            print("weighted movement")
             for percentage in MOVEMENT_CORRECTION_PERCENTAGES:
-                rotation_time_ms, rotation_direction, travel_direction, travel_time_ms =\
+                rotation_time_ms, rotation_direction, travel_direction, travel_time_ms,_ =\
                       self.calculateMovement(target_point)
                 self.makeMovement(rotation_direction, rotation_time_ms)
                 self.makeMovement(travel_direction, travel_time_ms*percentage)
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
                 self.updatePosition()
-        else:
-            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms =\
+        elif acquire_target:
+            print("go until found")
+            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms,_ =\
                   self.calculateMovement(target_point)
             self.makeMovement(rotation_direction, rotation_time_ms)
             self.makeMovement(travel_direction, travel_time_ms)
@@ -178,22 +189,23 @@ class Bot:
             self.updatePosition()
             distance = calculate_distance(self.position, target_point)
 
-            while distance > 15 and acquire_target:
-                rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = \
+            while distance > MOVEMENT_ERROR_ALLOWED and acquire_target:
+                rotation_time_ms, rotation_direction, travel_direction, travel_time_ms,_ = \
                     self.calculateMovement(target_point)
                 self.makeMovement(rotation_direction, rotation_time_ms)
                 self.makeMovement(travel_direction, travel_time_ms)
-                self.updatePosition()
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
+                self.updatePosition()
                 distance = calculate_distance(self.position, target_point)
                 print(f"Distance diffrence: {distance} correcting")
-
+        else:
+            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms,_ =\
+                  self.calculateMovement(target_point)
+            self.makeMovement(rotation_direction, rotation_time_ms)
+            self.makeMovement(travel_direction, travel_time_ms)
         return "Completed"
 
-    def calculateMovement(self, target_point):
-        bot_position, bot_angle = self.position, self.angle
-        # Calculate distance and angle to target
-        distance_to_target = calculate_distance(bot_position, target_point)
+    def calculate_rotation_needed(self,bot_position,bot_angle,target_point,):
         angle_to_target = calculate_angle_to_point(bot_position, target_point)
 
         # Calculate rotation and travel directions
@@ -213,19 +225,25 @@ class Bot:
             rotation_direction = "left"
             travel_direction = "forward"
             rotation_needed = 360 - rotation_needed
+        return rotation_needed, rotation_direction, travel_direction
 
+    def calculateMovement(self, target_point):
+        bot_position, bot_angle = self.position, self.angle
+        # Calculate distance and angle to target
+        distance_to_target = calculate_distance(bot_position, target_point)
+        rotation_needed, rotation_direction, travel_direction = self.calculate_rotation_needed(bot_position,bot_angle,target_point)
         # Calculate rotation and travel time
         rotation_time_ms = abs(rotation_needed) * self.get_closest_rate(
             rotation_needed, self.rate_of_movement[rotation_direction])
         travel_time_ms = distance_to_target * \
             self.get_closest_rate(distance_to_target, self.rate_of_movement[travel_direction])
         # Display the movement steps
-        print(
-            f"Rotation needed: {rotation_needed:.2f} degrees ({rotation_direction}), Time: {rotation_time_ms:.2f} ms")
-        print(
-            f"Move {travel_direction} to target, Distance: {distance_to_target:.2f} pixels, Time: {travel_time_ms:.2f} ms")
+        # print(
+        #     f"Rotation needed: {rotation_needed:.2f} degrees ({rotation_direction}), Time: {rotation_time_ms:.2f} ms")
+        # print(
+        #     f"Move {travel_direction} to target, Distance: {distance_to_target:.2f} pixels, Time: {travel_time_ms:.2f} ms")
 
-        return rotation_time_ms, rotation_direction, travel_direction, travel_time_ms
+        return rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, rotation_needed
 
     def get_closest_rate(self, target, rate_dict):
         # Find the key in rate closest to the target value

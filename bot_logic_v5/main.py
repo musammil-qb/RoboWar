@@ -26,36 +26,9 @@ def main():
         # Start Algorithm
         algorithm(detection, bot)
 
-    except Exception as e:
+    except KeyboardInterrupt:
         detection.destroy()
         print("Exiting...")
 
-from multiprocessing import Process, Queue, Manager 
-from display_video import display_video
-
-def main_v2():
-    frame_queue = Queue()
-    # with Manager() as manager:
-    if frame_queue:
-        # frame_queue = manager.dict()  # Shared dictionary
-        cam_ip = input("Enter camera ip: ")
-        if not cam_ip:
-            cam_ip = "10.7.110.39"
-        detection = Detection(cam_ip)
-        # Start processes
-        p1 = Process(target=detection.process_video, args=(frame_queue,))
-        p2 = Process(target=display_video, args=(frame_queue,))
-
-        try:
-            p1.start()
-            p2.start()   
-
-        finally:
-            del detection
-            p1.join()
-            p2.join()
-    
-
-
 if __name__ == "__main__":
-    main_v2()
+    main()

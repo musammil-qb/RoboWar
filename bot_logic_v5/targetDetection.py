@@ -12,7 +12,7 @@ def filter_balls(trimmed_field, balls, goal_center_point, buffer_distance=20, di
     filtered_balls = []
     intersection_points = []
     for ball in balls:
-        e1, e2 = calculate_extended_points(ball,goal_center_point, buffer_distance,extension_factor_after=0.15)
+        e1, e2 = calculate_extended_points(ball,goal_center_point, buffer_distance,extension_factor_after=0.3)
 
         if is_point_in_polygon(e1, trimmed_field) and is_point_in_polygon(e2, trimmed_field):
             filtered_balls.append(ball)

@@ -8,7 +8,7 @@ import random
 pressed_key = None
 cam_ip = input("Enter camera ip: ")
 if not cam_ip:
-    cam_ip = "192.168.32.247"
+    cam_ip = "192.168.187.44"
 stream_url = f'http://{cam_ip}:8080/video'
 video_stream = VideoStream(stream_url)
 
