@@ -20,7 +20,7 @@ BOT_CALIBRATION_ROTATION_MS_SAMPLES = [20, 360, 10]
 
 # Sleep constants
 SLEEP_BEFORE_GOAL = 0.1
-SLEEP_AFTER_GOAL = 0.2
+SLEEP_AFTER_GOAL = 0.1
 SLEEP_AFTER_MOVEMENT = 0.01
 SLEEP_BALL_NOT_FOUND = 1 # sleep when bot center or ball not found
 SLEEP_AFTER_EACH_LOOP = 0.1
@@ -77,3 +77,4 @@ IS_ARUCO_WORKING = True
 
 DEFENCE_INITIAL_MOVEMENTS = [['right',278],['backward',270]]
 DEFENCE_LOOP_MOVEMENTS = [['forward',442],['backward',442]]
+NO_DEFENCE_MOVE_WITH_NO_TARGET_BALLS = 5 #no of iterations of defence to move before

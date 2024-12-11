@@ -96,10 +96,10 @@ class Bot:
             time.sleep(SLEEP_AFTER_CALIBRATION_MOVEMENT)
 
             _, final_angle = self.getPositionAndAngle()
-            print(f"initial angle: {initial_angle} Final angle: {final_angle}")
 
             # Calculate angle change per millisecond
             angle_traveled = abs(final_angle - initial_angle)
+            print(f"initial angle: {initial_angle} Final angle: {final_angle} angle traveled: {angle_traveled}")
             rate = interval / angle_traveled if angle_traveled > 0 else 0
 
             return {angle_traveled: rate}

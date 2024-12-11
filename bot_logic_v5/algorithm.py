@@ -13,7 +13,8 @@ from const import BLUE, GREEN, RED, SLEEP_AFTER_GOAL, YELLOW, SLEEP_AFTER_EACH_L
     EXTENDED_POINT_OFFSET, EDGE_BALL_ROTATION_DISTANCE, SLEEP_AFTER_DISPLAYING,\
     EDGE_BALL_MOVEMENT_DISTANCE, SLEEP_AFTER_DEFENSE,RANDOM_MOVEMENT_DELAY_RANGE,\
     RANDOM_MOVEMENT_SPEED, RANDOM_MOVEMENT_DIRECTIONS, GREY, FORWARD_MOVEMENT_DELAY,\
-    IS_ARUCO_WORKING, DEFENCE_INITIAL_MOVEMENTS, DEFENCE_LOOP_MOVEMENTS
+    IS_ARUCO_WORKING, DEFENCE_INITIAL_MOVEMENTS, DEFENCE_LOOP_MOVEMENTS,\
+    NO_DEFENCE_MOVE_WITH_NO_TARGET_BALLS
 
 
 target_point,selected_point = None, None
@@ -85,6 +86,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             while True:
                 bot.makeMovement(*DEFENCE_LOOP_MOVEMENTS[0])
                 bot.makeMovement(*DEFENCE_LOOP_MOVEMENTS[1])
+                bot.move(detection.default_point)      
                 time.sleep(SLEEP_AFTER_DEFENSE)
 
     elif strategy == 'r':
@@ -242,7 +244,21 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             target_point, goal_point = None, None
             time.sleep(SLEEP_AFTER_GOAL)
             edge_counter = 0
-
+        elif strategy == 'c':
+            bot.move(detection.default_point)
+            frame = detection.video_stream.read()
+            defense_point_1, defense_point_2 = get_defense_points(detection)
+            cv2.circle(frame, defense_point_1,5, YELLOW, -1)  
+            cv2.circle(frame, defense_point_2,5, YELLOW, -1)  
+            cv2.imshow('Feed', frame)
+            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+            bot.makeMovement(*DEFENCE_INITIAL_MOVEMENTS[0])
+            bot.makeMovement(*DEFENCE_INITIAL_MOVEMENTS[1])
+            for _ in range(NO_DEFENCE_MOVE_WITH_NO_TARGET_BALLS):
+                bot.makeMovement(*DEFENCE_LOOP_MOVEMENTS[0])
+                bot.makeMovement(*DEFENCE_LOOP_MOVEMENTS[1])
+                bot.move(detection.default_point, acquire_target=False)
+                time.sleep(SLEEP_AFTER_DEFENSE)
         elif not disable_algorithm and next_target_point is None and edge_counter <=5:
             edge_counter += 1
             print("Targeting edge ball")
@@ -253,6 +269,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     detection.cm_pixel_rate * EDGE_BALL_ROTATION_DISTANCE, detection.cm_pixel_rate * EDGE_BALL_MOVEMENT_DISTANCE
                 )
                 if display:
+                    frame = detection.video_stream.read()
                     cv2.circle(frame, target_point, 5, YELLOW, -1)
                     cv2.putText(frame, str(edge_movement_direction), target_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, BLUE, 2)
                     cv2.imshow('Feed', frame)
