@@ -11,7 +11,7 @@ from const import BLUE, GREEN, RED,  YELLOW, \
     SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, \
     EXTENDED_POINT_OFFSET, EDGE_BALL_ROTATION_DISTANCE, SLEEP_AFTER_DISPLAYING,\
     EDGE_BALL_MOVEMENT_DISTANCE, SLEEP_AFTER_DEFENSE, \
-    NO_DEFENCE_MOVE_WITH_NO_TARGET_BALLS, DEFENSE_MODE
+    NO_DEFENSE_MOVE_WITH_NO_TARGET_BALLS, DEFENSE_MODE
 
 
 target_point,selected_point = None, None
@@ -116,7 +116,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 cv2.circle(frame, defense_point_2,5, YELLOW, -1)  
                 cv2.imshow('Feed', frame)
                 cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-                for _ in range(NO_DEFENCE_MOVE_WITH_NO_TARGET_BALLS):
+                for _ in range(NO_DEFENSE_MOVE_WITH_NO_TARGET_BALLS):
                     bot.move(defense_point_1, acquire_target=False)
                     bot.move(defense_point_2, acquire_target=False)
                     bot.move(detection.default_point, acquire_target=False)

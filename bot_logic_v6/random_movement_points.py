@@ -6,7 +6,7 @@ from random import randint
 
 from const import FORWARD_OFFENCE_POINT_DISTANCE_AFTER_CENTER, IS_ARUCO_WORKING, \
     DEFENSE_POINT_DISTANCE_FROM_DEFAULT_POINT, FORWARD_MOVEMENT_DELAY, SLEEP_AFTER_DISPLAYING, \
-    SLEEP_AFTER_DEFENSE, YELLOW, DEFENCE_LOOP_MOVEMENTS, DEFENCE_INITIAL_MOVEMENTS, \
+    SLEEP_AFTER_DEFENSE, YELLOW, DEFENSE_LOOP_MOVEMENTS, DEFENSE_INITIAL_MOVEMENTS, \
     RANDOM_MOVEMENT_DELAY_RANGE, RANDOM_MOVEMENT_DIRECTIONS, RANDOM_MOVEMENT_SPEED, SLEEP_AFTER_MOVEMENT
 
 
@@ -76,11 +76,11 @@ def random_movement_algorithm(detection, bot, strategy,defense_point_1,defense_p
             cv2.circle(frame, defense_point_2,5, YELLOW, -1)  
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-            bot.makeMovement(*DEFENCE_INITIAL_MOVEMENTS[0])
-            bot.makeMovement(*DEFENCE_INITIAL_MOVEMENTS[1])
+            bot.makeMovement(*DEFENSE_INITIAL_MOVEMENTS[0])
+            bot.makeMovement(*DEFENSE_INITIAL_MOVEMENTS[1])
             while True:
-                bot.makeMovement(*DEFENCE_LOOP_MOVEMENTS[0])
-                bot.makeMovement(*DEFENCE_LOOP_MOVEMENTS[1])
+                bot.makeMovement(*DEFENSE_LOOP_MOVEMENTS[0])
+                bot.makeMovement(*DEFENSE_LOOP_MOVEMENTS[1])
                 bot.move(detection.default_point)      
                 time.sleep(SLEEP_AFTER_DEFENSE)
 

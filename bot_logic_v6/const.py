@@ -78,7 +78,7 @@ MIN_DISTANCE_FOR_ONE_DEGREE_CORRECTION = 200
 IS_ARUCO_WORKING = True 
 DEFENSE_MODE = 1  # 1 Razal mode 2 Defense point movement
 
-DEFENCE_INITIAL_MOVEMENTS = [['right',278],['backward',270]]
-DEFENCE_LOOP_MOVEMENTS = [['forward',442],['backward',442]]
-NO_DEFENCE_MOVE_WITH_NO_TARGET_BALLS = 5 #no of iterations of defence to move before
+DEFENSE_INITIAL_MOVEMENTS = [['right',278],['backward',270]]
+DEFENSE_LOOP_MOVEMENTS = [['forward',442],['backward',442]]
+NO_DEFENSE_MOVE_WITH_NO_TARGET_BALLS = 5 #no of iterations of defense to move before
 DEFENSE_INTERCEPTION_DISTANCE = 50
