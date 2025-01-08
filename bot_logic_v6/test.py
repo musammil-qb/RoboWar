@@ -25,7 +25,7 @@ def main(image_path=None, video_path=None, disable_bot=True,disable_algorithm=Fa
     if not disable_bot:
         print("Waiting for initial bot detection...")
         while True:
-            bot_angle, bot_center_point, _, _ = detection.detect_aruco()
+            bot_angle, bot_center_point, _, _, _ = detection.detect_aruco()
             if bot_angle is not None:
                 print(f"Bot angle: {bot_angle}, bot center point: {bot_center_point}")
                 break

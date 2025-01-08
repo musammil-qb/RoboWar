@@ -12,7 +12,7 @@ class Bot:
         # todo
         self.bot_ip = input("Enter Bot ip: ")
         if not self.bot_ip:
-            self.bot_ip = "192.168.35.103"  # TODO ip from input
+            self.bot_ip = "192.168.99.103"  # TODO ip from input
         self.position = position  # bot center point
         self.angle = angle
         self.movement = 'stop'
@@ -108,7 +108,7 @@ class Bot:
         bot_center_point = None
         counter = 0
         while bot_center_point is None:
-            bot_angle, bot_center_point, _, _ = self.detection.detect_aruco()
+            bot_angle, bot_center_point, _, _, _ = self.detection.detect_aruco()
             if bot_center_point is None:
                 print("Bot position not found recalculating")
                 time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
@@ -155,11 +155,11 @@ class Bot:
         if orient_only:
             rotation_time_ms, rotation_direction, _, _, rotation_needed, distance_to_target=\
                 self.calculateMovement(target_point)
-            distance_to_target_in_cm = distance_to_target / self.detection.cm_pixel_rate
+            distance_to_target_in_cm = distance_to_target / self.detection.cm_to_pixel_rate
             allowed_rotation_error = map_rotation_range(
                 distance_to_target_in_cm,0,MIN_DISTANCE_FOR_ONE_DEGREE_CORRECTION,
                 *ORIENT_ROTATION_ERROR_ALLOWED)
-            print(f"Allowed rotation error: {allowed_rotation_error}\tDistance: {distance_to_target_in_cm} distance in pixel: {distance_to_target}\t rate:{self.detection.cm_pixel_rate}")
+            print(f"Allowed rotation error: {allowed_rotation_error}\tDistance: {distance_to_target_in_cm} distance in pixel: {distance_to_target}\t rate:{self.detection.cm_to_pixel_rate}")
             correction_count=0
             while rotation_needed > allowed_rotation_error and correction_count < CORRECTION_LIMIT:
                 self.makeMovement(rotation_direction, rotation_time_ms)
@@ -168,8 +168,6 @@ class Bot:
                 rotation_time_ms, rotation_direction, _, _, rotation_needed, distance_to_target=\
                 self.calculateMovement(target_point)
                 correction_count+=1
-
-
         elif ram:
             _, _, travel_direction, travel_time_ms, _, _ =\
         self.calculateMovement(target_point)

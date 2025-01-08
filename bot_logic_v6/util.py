@@ -130,10 +130,10 @@ def map_rotation_range(value, old_min, old_max, new_min, new_max):
         mapped_value = new_min + ((value - old_min) * (new_max - new_min)) / (old_max - old_min)
     return mapped_value
 
-def is_ball_moved(balls, target_ball,cm_pixel_rate):
+def is_ball_moved(balls, target_ball,cm_to_pixel_rate):
     ball_moved = True
     for ball in balls:
-        distance = calculate_distance(ball,target_ball)/cm_pixel_rate
+        distance = calculate_distance(ball,target_ball)/cm_to_pixel_rate
         if  distance <= BALL_MOVEMENT_BUFFER:
             ball_moved = False
     return ball_moved

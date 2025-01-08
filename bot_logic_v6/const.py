@@ -1,8 +1,10 @@
+import cv2.aruco as aruco
 # Arucode Ids
 BOT_ID = 69
 POST_ID  = 92
 
-OPPONENT_ARUCO = 17
+OPPONENT_ARUCO_ID = 21
+OPPONENT_ARUCO_TYPE = aruco.DICT_5X5_100
 
 #  colors
 BLUE = (255, 0, 0)
@@ -73,8 +75,10 @@ ORIENT_ROTATION_ERROR_ALLOWED = [8,1]
 MIN_DISTANCE_FOR_ONE_DEGREE_CORRECTION = 200
 
 
-IS_ARUCO_WORKING = True
+IS_ARUCO_WORKING = True 
+DEFENSE_MODE = 1  # 1 Razal mode 2 Defense point movement
 
 DEFENCE_INITIAL_MOVEMENTS = [['right',278],['backward',270]]
 DEFENCE_LOOP_MOVEMENTS = [['forward',442],['backward',442]]
 NO_DEFENCE_MOVE_WITH_NO_TARGET_BALLS = 5 #no of iterations of defence to move before
+DEFENSE_INTERCEPTION_DISTANCE = 50
