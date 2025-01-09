@@ -28,12 +28,12 @@ class Bot:
             self.calibrate()
 
     def goto_initial_postion(self):
-        input("reset to default location")
-        return
-        self.move(self.detection.default_point, acquire_target=False)
+        # input("reset to default location")
+        # return
+        self.move(self.detection.default_point, acquire_target=True)
         time.sleep(SLEEP_AFTER_MOVEMENT)
         self.move(self.detection.goal_posts['opponent']['post_center_point'],
-                   orient_only=True)
+                   orient_only=True,orientation='forward')
 
     def calibrate(self):
         calibrate_file = "calibrated_speed.json"
@@ -147,18 +147,19 @@ class Bot:
         if res.status_code != 200:
             print("Bot movement failed communication issue")
 
-    def move(self, target_point, acquire_target=True, orient_only=False,ram=False):
+    def move(self, target_point, acquire_target=True, orient_only=False, ram=False, allowed_rotation_error=0, orientation=None,movement_correction_percent = MOVEMENT_CORRECTION_PERCENTAGES):
         if target_point is None or self.position is None:
             print(
                 f"target point or position failed target point:{target_point}  bot center point:{self.position}")
             return False
         if orient_only:
             rotation_time_ms, rotation_direction, _, _, rotation_needed, distance_to_target=\
-                self.calculateMovement(target_point)
+                self.calculateMovement(target_point,orientation=orientation)
             distance_to_target_in_cm = distance_to_target / self.detection.cm_to_pixel_rate
-            allowed_rotation_error = map_rotation_range(
-                distance_to_target_in_cm,0,MIN_DISTANCE_FOR_ONE_DEGREE_CORRECTION,
-                *ORIENT_ROTATION_ERROR_ALLOWED)
+            if not allowed_rotation_error:
+                allowed_rotation_error = map_rotation_range(
+                    distance_to_target_in_cm,0,MIN_DISTANCE_FOR_ONE_DEGREE_CORRECTION,
+                    *ORIENT_ROTATION_ERROR_ALLOWED)
             print(f"Allowed rotation error: {allowed_rotation_error}\tDistance: {distance_to_target_in_cm} distance in pixel: {distance_to_target}\t rate:{self.detection.cm_to_pixel_rate}")
             correction_count=0
             while rotation_needed > allowed_rotation_error and correction_count < CORRECTION_LIMIT:
@@ -166,7 +167,7 @@ class Bot:
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
                 self.updatePosition()
                 rotation_time_ms, rotation_direction, _, _, rotation_needed, distance_to_target=\
-                self.calculateMovement(target_point)
+                self.calculateMovement(target_point,orientation=orientation)
                 correction_count+=1
         elif ram:
             _, _, travel_direction, travel_time_ms, _, _ =\
@@ -174,9 +175,9 @@ class Bot:
             self.makeMovement(travel_direction, travel_time_ms)
             time.sleep(MOVEMENT_CORRECTION_SLEEP)
             self.updatePosition()
-        elif MOVEMENT_CORRECTION_PERCENTAGES and acquire_target:
+        elif movement_correction_percent and acquire_target:
             print("weighted movement")
-            for percentage in MOVEMENT_CORRECTION_PERCENTAGES:
+            for percentage in movement_correction_percent:
                 rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ =\
                       self.calculateMovement(target_point)
                 self.makeMovement(rotation_direction, rotation_time_ms)
@@ -210,33 +211,42 @@ class Bot:
             self.makeMovement(travel_direction, travel_time_ms)
         return "Completed"
 
-    def calculate_rotation_needed(self,bot_position,bot_angle,target_point,):
+    def calculate_rotation_needed(self,bot_position,bot_angle,target_point,orientation=None):
         angle_to_target = calculate_angle_to_point(bot_position, target_point)
 
         # Calculate rotation and travel directions
         rotation_needed = (angle_to_target - bot_angle) % 360
-        if rotation_needed < 90:
-            rotation_direction = "right"
+        if orientation is None:
+            if rotation_needed < 90:
+                rotation_direction = "right"
+                travel_direction = "forward"
+            elif rotation_needed > 90 and rotation_needed < 180:
+                rotation_direction = "left"
+                travel_direction = "backward"
+                rotation_needed = 180 - rotation_needed
+            elif rotation_needed > 180 and rotation_needed < 270:
+                rotation_direction = "right"
+                travel_direction = "backward"
+                rotation_needed = rotation_needed - 180
+            else:
+                rotation_direction = "left"
+                travel_direction = "forward"
+                rotation_needed = 360 - rotation_needed
+        elif orientation == 'forward':
+            rotation_direction = "right" if rotation_needed < 180 else "left"
+            rotation_needed = rotation_needed if rotation_needed < 180 else (360 - rotation_needed)
             travel_direction = "forward"
-        elif rotation_needed > 90 and rotation_needed < 180:
-            rotation_direction = "left"
+        elif orientation == 'backward':
+            rotation_direction = "left" if rotation_needed < 180 else "right"
+            rotation_needed = (180 - rotation_needed) if rotation_needed < 180 else (rotation_needed - 180)
             travel_direction = "backward"
-            rotation_needed = 180 - rotation_needed
-        elif rotation_needed > 180 and rotation_needed < 270:
-            rotation_direction = "right"
-            travel_direction = "backward"
-            rotation_needed = rotation_needed - 180
-        else:
-            rotation_direction = "left"
-            travel_direction = "forward"
-            rotation_needed = 360 - rotation_needed
         return rotation_needed, rotation_direction, travel_direction
 
-    def calculateMovement(self, target_point):
+    def calculateMovement(self, target_point,orientation=None):
         bot_position, bot_angle = self.position, self.angle
         # Calculate distance and angle to target
         distance_to_target = calculate_distance(bot_position, target_point)
-        rotation_needed, rotation_direction, travel_direction = self.calculate_rotation_needed(bot_position,bot_angle,target_point)
+        rotation_needed, rotation_direction, travel_direction = self.calculate_rotation_needed(bot_position,bot_angle,target_point,orientation)
         # Calculate rotation and travel time
         rotation_time_ms = abs(rotation_needed) * self.get_closest_rate(
             rotation_needed, self.rate_of_movement[rotation_direction])
@@ -247,7 +257,6 @@ class Bot:
         #     f"Rotation needed: {rotation_needed:.2f} degrees ({rotation_direction}), Time: {rotation_time_ms:.2f} ms")
         # print(
         #     f"Move {travel_direction} to target, Distance: {distance_to_target:.2f} pixels, Time: {travel_time_ms:.2f} ms")
-
         return rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, rotation_needed, distance_to_target
 
     def get_closest_rate(self, target, rate_dict):

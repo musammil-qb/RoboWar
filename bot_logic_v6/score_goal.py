@@ -79,15 +79,15 @@ def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement
     print("Goal reached!")
 
     # Coming back to target point to avoid self goal
-    if bot:
-        if display:
-            # frame = detection.video_stream.read()
-            cv2.circle(frame, target_point, 5, YELLOW, -1)
-            cv2.imshow('Feed', frame)
-            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-        bot.updatePosition()
-        bot.move(target_point,acquire_target=False)
-        time.sleep(SLEEP_AFTER_MOVEMENT)
+    # if bot:
+    #     if display:
+    #         # frame = detection.video_stream.read()
+    #         cv2.circle(frame, target_point, 5, YELLOW, -1)
+    #         cv2.imshow('Feed', frame)
+    #         cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+    #     bot.updatePosition()
+    #     bot.move(target_point,acquire_target=False)
+    #     time.sleep(SLEEP_AFTER_MOVEMENT)
     target_point, goal_point = None, None
     time.sleep(SLEEP_AFTER_GOAL)
     edge_counter = 0
