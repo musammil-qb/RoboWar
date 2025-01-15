@@ -7,12 +7,13 @@ from edge_logic_new import find_target_and_direction
 from random_movement_points import random_movement_algorithm, get_defense_points
 from score_goal import score_goal
 from defense import calculate_blocking_point
-from sweep_corners import find_sweep_corner_points, sweep_movements
+from sweep_corners import find_sweep_corner_points, sweep
 from const import BLUE, GREEN, RED,  YELLOW, \
     SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, \
     EXTENDED_POINT_OFFSET, EDGE_BALL_ROTATION_DISTANCE, SLEEP_AFTER_DISPLAYING,\
     EDGE_BALL_MOVEMENT_DISTANCE, SLEEP_AFTER_DEFENSE, \
-    NO_DEFENSE_MOVE_WITH_NO_TARGET_BALLS, DEFENSE_MODE
+    NO_DEFENSE_MOVE_WITH_NO_TARGET_BALLS, DEFENSE_MODE, \
+    EDGE_ROTATION_DELAY
 
 
 target_point,selected_point = None, None
@@ -24,11 +25,13 @@ def select_point(event, x, y, flags, param):
 def algorithm(detection, bot, display=True, test=False, image=False, disable_algorithm=False):
     global target_point,selected_point
     edge_movement_direction = None
-    sweep_points = find_sweep_corner_points(detection)
+    sweep_movements = find_sweep_corner_points(detection)
     sweep_position = 0
+
     if display:
-        cv2.namedWindow("Feed" )
-        cv2.setMouseCallback("Feed",select_point)  
+        cv2.namedWindow("Feed")
+        cv2.setMouseCallback("Feed",select_point)
+
     goal_center_point = detection.goal_posts['opponent']['post_center_point']
     self_goal_center_point = detection.goal_posts['self']['post_center_point']
     opponent_edge = detection.goal_posts['opponent']['edge']
@@ -145,8 +148,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 bot.updatePosition()
                 bot.move(point_of_intercept, acquire_target=False)
         elif strategy == 's':
-            print(f"Sweeping postion{sweep_position} to {sweep_position+1}")
-            sweep_movements(detection,sweep_position,sweep_points,bot)
+            sweep(detection,sweep_movements[sweep_position],bot,display)
             if sweep_position<5:
                 sweep_position+=1
             else:
@@ -172,7 +174,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     bot.move(target_point)
                     time.sleep(SLEEP_AFTER_MOVEMENT)
                     if edge_movement_direction in ["right","left"]:
-                        bot.makeMovement(edge_movement_direction, 2000,edge_rotation=True)
+                        bot.makeMovement(edge_movement_direction, EDGE_ROTATION_DELAY,edge_rotation=True)
                     else:
                         bot.move(closest_ball)
                         bot.updatePosition()
