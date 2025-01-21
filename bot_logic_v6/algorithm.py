@@ -7,7 +7,7 @@ from edge_logic_new import find_target_and_direction
 from random_movement_points import random_movement_algorithm, get_defense_points
 from score_goal import score_goal
 from defense import calculate_blocking_point
-from sweep_corners import find_sweep_corner_points, sweep
+from sweep_corners import find_sweep_movements, sweep, find_best_sweep_movement
 from const import BLUE, GREEN, RED,  YELLOW, \
     SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, \
     EXTENDED_POINT_OFFSET, EDGE_BALL_ROTATION_DISTANCE, SLEEP_AFTER_DISPLAYING,\
@@ -25,8 +25,8 @@ def select_point(event, x, y, flags, param):
 def algorithm(detection, bot, display=True, test=False, image=False, disable_algorithm=False):
     global target_point,selected_point
     edge_movement_direction = None
-    sweep_movements = find_sweep_corner_points(detection)
-    sweep_position = 0
+    sweep_movements = find_sweep_movements(detection)
+    # sweep_position = 0
 
     if display:
         cv2.namedWindow("Feed")
@@ -148,11 +148,13 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 bot.updatePosition()
                 bot.move(point_of_intercept, acquire_target=False)
         elif strategy == 's':
-            sweep(detection,sweep_movements[sweep_position],bot,display)
-            if sweep_position<5:
-                sweep_position+=1
-            else:
-                sweep_position = 0
+            best_sweep_movement = find_best_sweep_movement(sweep_movements, balls, detection.cm_to_pixel_rate)
+            sweep(detection, best_sweep_movement, bot, display)
+            # sweep(detection,sweep_movements[sweep_position],bot,display)
+            # if sweep_position<5:
+            #     sweep_position+=1
+            # else:
+            #     sweep_position = 0
             
         elif not disable_algorithm and next_target_point is None and edge_counter <=5:
             edge_counter += 1
