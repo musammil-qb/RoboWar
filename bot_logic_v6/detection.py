@@ -29,7 +29,7 @@ class Detection:
         else:
             cam_ip = input("Enter camera ip: ")
             if not cam_ip:
-                cam_ip = "192.168.184.173"
+                cam_ip = "192.168.226.187"
                 # cam_ip = "localhost"
 
             # stream_url = f'http://{cam_ip}:8080/video?960x720'

@@ -11,12 +11,14 @@ from bot import Bot
 movement_dict = { 'f': 'forward', 'b': 'backward', 'l': 'left', 'r': 'right' }
 
 
-selected_point = None
+selected_point, orient_point = None, None
+
 def select_point(event, x, y, flags, param):
-    global selected_point
+    global selected_point, orient_point
     if event == cv2.EVENT_LBUTTONDOWN:
         selected_point = (x, y)
-        
+    if event == cv2.EVENT_RBUTTONDOWN:
+        orient_point = (x, y)
 
 def main():
     detection= Detection()
@@ -27,7 +29,7 @@ def main():
     cv2.namedWindow("Feed" )
     cv2.setMouseCallback("Feed",select_point)  
     bot = Bot(bot_center_point, bot_angle, detection,calibrate=True)
-    global selected_point
+    global selected_point, orient_point
     data = []
     pressed_key = None
     while True:
@@ -45,12 +47,6 @@ def main():
                 continue
             bot.updatePosition()
             bot.move(selected_point,acquire_target=True)
-            # rotation_time_ms, rotation_direction, travel_direction, travel_time_ms = bot.calculateMovement(selected_point)
-            # bot.makeMovement(rotation_direction,rotation_time_ms)
-            time.sleep(SLEEP_AFTER_MOVEMENT)
-            bot_angle,bot_center_point ,goal_center_point, _ = detection.detect_aruco()
-            bot.updatePosition()
-            bot.move(goal_center_point,acquire_target=False,orient_only=True)
             time.sleep(SLEEP_AFTER_MOVEMENT)
             detection_object = detection.process_frame()
             bot_angle, bot_center_point = detection_object['aruco']['bot_angle'], \
@@ -61,6 +57,33 @@ def main():
             else:
                 print(f"Bot center point:{bot_center_point}")
             selected_point = None
+
+        if orient_point is not None:
+            cv2.circle(frame,orient_point,3,GREEN,-1)
+            cv2.imshow('Feed', frame)
+            if not pressed_key:
+                pressed_key = cv2.waitKey(1)
+            detection_object = detection.process_frame()
+            bot_angle, bot_center_point = detection_object['aruco']['bot_angle'], \
+                detection_object['aruco']['bot_center_point']
+            if bot_center_point is None:
+                print("Bot not found interrupt")
+                continue
+            bot.updatePosition()
+            print("right click",)
+            bot.move(orient_point,acquire_target=False,orient_only=True,orientation='forward')
+            time.sleep(SLEEP_AFTER_MOVEMENT)
+            detection_object = detection.process_frame()
+            bot_angle, bot_center_point = detection_object['aruco']['bot_angle'], \
+                detection_object['aruco']['bot_center_point']
+            print("Bot position: ", bot_center_point)
+            if bot_center_point is not None:
+                bot.calculateMovement(orient_point)
+            else:
+                print(f"Bot center point:{bot_center_point}")
+            orient_point = None
+
+        
         frame = detection.video_stream.read()
         cv2.imshow('Feed', frame)
         if not pressed_key:
@@ -70,7 +93,7 @@ def main():
             print("Exiting...")
             break
         elif pressed_key == ord('d'):
-            bot_angle, bot_center_point, _, _ = detection.detect_aruco()
+            bot_angle, bot_center_point, _, _, _ = detection.detect_aruco()
             # cv2.circle(frame,bot_center_point,3,GREEN,-1)
             print(bot_angle, bot_center_point)
         elif pressed_key == ord('c'):
@@ -88,7 +111,7 @@ def main():
                                   bot.rate_of_movement[movement_dict[movement]])
             bot.makeMovement(movement_dict[movement], delay)
             time.sleep(SLEEP_AFTER_MOVEMENT)
-            finale_bot_angle, final_bot_center_point, _, _ = detection.detect_aruco()
+            finale_bot_angle, final_bot_center_point, _, _, _ = detection.detect_aruco()
             if initial_bot_center_point is not None and final_bot_center_point is not None:
                 distance_difference =calculate_distance(final_bot_center_point,initial_bot_center_point)
             else:

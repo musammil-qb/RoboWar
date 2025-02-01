@@ -12,7 +12,7 @@ class Bot:
         # todo
         self.bot_ip = input("Enter Bot ip: ")
         if not self.bot_ip:
-            self.bot_ip = "192.168.184.103"  # TODO ip from input
+            self.bot_ip = "192.168.226.103"  # TODO ip from input
         self.position = position  # bot center point
         self.angle = angle
         self.movement = 'stop'
