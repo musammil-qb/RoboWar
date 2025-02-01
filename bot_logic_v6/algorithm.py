@@ -26,7 +26,6 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     global target_point,selected_point
     edge_movement_direction = None
     sweep_movements = find_sweep_movements(detection)
-    # sweep_position = 0
 
     if display:
         cv2.namedWindow("Feed")
@@ -74,8 +73,8 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             selected_point = None
 
         detection_object = detection.process_frame()
-        bot_center_point, balls = \
-            detection_object['aruco']['bot_center_point'], detection_object['yolo']['balls']    
+        bot_center_point, balls = detection_object['aruco']['bot_center_point'], detection_object['yolo']['balls']
+        opponent_bot = detection_object['aruco']['opponent_bot']
         if not bot_center_point and bot:
             bot.updatePosition(detection_object['aruco']['bot_center_point'],
                                detection_object['aruco']['bot_angle'])
@@ -98,7 +97,32 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 trimmed_field, balls, goal_center_point,
                 buffer_distance=int(EXTENDED_POINT_OFFSET*detection.cm_to_pixel_rate))
             next_target_point = choose_next_target_point(intersection_points, bot_center_point)
-
+            
+            if next_target_point is not None:
+                if not score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, display=True):
+                    continue
+            else:
+                defense_needed = False
+                if opponent_bot:
+                    for ball in balls:
+                        if calculate_distance(opponent_bot, ball) < 50 * detection.cm_to_pixel_rate:
+                            defense_needed = True
+                            break
+                
+                if defense_needed:
+                    point_of_intercept = calculate_blocking_point(
+                        opponent_bot, self_goal_center_point, detection.cm_to_pixel_rate)
+                    if not point_of_intercept:
+                        bot.updatePosition()
+                        bot.move(defense_point_1, acquire_target=False)
+                        point_of_intercept = detection.default_point
+                    
+                    bot.updatePosition()
+                    bot.move(point_of_intercept, acquire_target=False)
+                else:
+                    best_sweep_movement = find_best_sweep_movement(sweep_movements, balls, detection.cm_to_pixel_rate)
+                    sweep(detection, best_sweep_movement, bot, display)
+        
         if display and test and not disable_algorithm:
             for ball in filtered_balls:
                 cv2.circle(frame, ball, 3, GREEN, -1)
@@ -107,56 +131,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 cv2.circle(frame, possible_movement['goal_point'], 5, YELLOW, -1)
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-        if not disable_algorithm and next_target_point is not None:
-            if not score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, display=True):
-                continue
-        elif strategy == 'c':
-            if DEFENSE_MODE == 2:
-                bot.move(detection.default_point)
-                frame = detection.video_stream.read()
-                defense_point_1, defense_point_2, defense_center = get_defense_points(detection)
-                cv2.circle(frame, defense_point_1,5, YELLOW, -1)  
-                cv2.circle(frame, defense_point_2,5, YELLOW, -1)  
-                cv2.imshow('Feed', frame)
-                cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-                for _ in range(NO_DEFENSE_MOVE_WITH_NO_TARGET_BALLS):
-                    bot.updatePosition()
-                    bot.move(defense_point_1, acquire_target=False)
-                    bot.updatePosition()
-                    bot.move(defense_point_2, acquire_target=False)
-                    bot.updatePosition()
-                    bot.move(defense_center, acquire_target=False)
-                    time.sleep(SLEEP_AFTER_DEFENSE)
-            else:
-                opponent_bot = detection_object['aruco']['opponent_bot']
-                if not opponent_bot:
-                    print("opponent bot not found")
-                    continue
-                frame = detection.video_stream.read()
-                # detection_object = detection.process_frame()
-
-                point_of_intercept = calculate_blocking_point(
-                opponent_bot, self_goal_center_point, detection.cm_to_pixel_rate)
-                if not point_of_intercept:
-                    bot.updatePosition()
-                    bot.move(defense_point_1, acquire_target=False)
-                    point_of_intercept = detection.default_point
-                print("intercepting...")
-                cv2.circle(frame, point_of_intercept, 5, YELLOW, -1)
-                cv2.imshow('Feed', frame)
-                cv2.waitKey(1)
-                bot.updatePosition()
-                bot.move(point_of_intercept, acquire_target=False)
-        elif strategy == 's':
-            best_sweep_movement = find_best_sweep_movement(sweep_movements, balls, detection.cm_to_pixel_rate)
-            sweep(detection, best_sweep_movement, bot, display)
-            # sweep(detection,sweep_movements[sweep_position],bot,display)
-            # if sweep_position<5:
-            #     sweep_position+=1
-            # else:
-            #     sweep_position = 0
-            
-        elif not disable_algorithm and next_target_point is None and edge_counter <=5:
+        if not disable_algorithm and next_target_point is None and edge_counter <=5:
             edge_counter += 1
             print("Targeting edge ball")
             if balls and bot_center_point:

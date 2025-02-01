@@ -35,7 +35,6 @@ def main(image_path=None, video_path=None, disable_bot=True,disable_algorithm=Fa
         print("Bot functionality is disabled.")
         bot = None
     print("Initialization completed!")
-
     try:
         algorithm(detection, bot,test=True,image=bool(image_path),disable_algorithm=disable_algorithm)
     except KeyboardInterrupt:

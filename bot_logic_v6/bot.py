@@ -12,7 +12,7 @@ class Bot:
         # todo
         self.bot_ip = input("Enter Bot ip: ")
         if not self.bot_ip:
-            self.bot_ip = "192.168.248.103"  # TODO ip from input
+            self.bot_ip = "192.168.184.103"  # TODO ip from input
         self.position = position  # bot center point
         self.angle = angle
         self.movement = 'stop'
@@ -34,6 +34,7 @@ class Bot:
         time.sleep(SLEEP_AFTER_MOVEMENT)
         self.move(self.detection.goal_posts['opponent']['post_center_point'],
                    orient_only=True,orientation='forward')
+        time.sleep(0.3)
 
     def calibrate(self):
         calibrate_file = "calibrated_speed.json"
