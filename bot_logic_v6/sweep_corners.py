@@ -90,11 +90,8 @@ def find_best_sweep_movement(sweep_movements, balls, cm_to_pixel_rate):
                 ball_count += 1
             # if ball_count > 2:
             #     return sweep_movement
-        print("\n")
         sweep_movement_score.append({'ball_count':ball_count,'sweep_movement':sweep_movement})
     sorted_sweep_movements = sorted(sweep_movement_score,key=lambda x:x['ball_count'],reverse=True)
-    print('sorted Array: ')
-    print(*list(sorted_sweep_movements),sep='\n')
     return sorted_sweep_movements[0]['sweep_movement']
 
 
@@ -114,8 +111,6 @@ def sweep(detection,sweep_movement,bot,display):
         bot.move(sweep_movement['start_point'],acquire_target=False)
 
     points = find_points_between(sweep_movement['start_point'], sweep_movement['end_point'],max_length=detection.cm_to_pixel_rate * 20)
-    print('Sweep: ',points)
-    # bot.move(sweep_movement['end_point'],orient_only=True,allowed_rotation_error=5)
     for point in points:
         bot.updatePosition()
         bot.move(point, acquire_target=False)

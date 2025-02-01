@@ -43,8 +43,7 @@ class Bot:
             calibrate_temp_file = "calibrated_speed_temp.json"
             if os.path.exists(calibrate_temp_file):
                 with open(calibrate_temp_file, "r") as calibrationfile:
-                    rate_of_movement_temp = json.load(calibrationfile)
-                    self.rate_of_movement = rate_of_movement_temp
+                    self.rate_of_movement = json.load(calibrationfile)
             else:
                 print("temporary calibration not found exiting")
                 exit(0)
@@ -67,7 +66,10 @@ class Bot:
         else:
             with open(calibrate_file, "r") as calibrationfile:
                 rate_of_movement = json.load(calibrationfile)
-
+        print("Max left angle:", max(rate_of_movement['left'].keys()))
+        print("Max right angle:", max(rate_of_movement['right'].keys()))
+        print("Max forward distance:", max(rate_of_movement['forward'].keys()))
+        print("Max backward distance:", max(rate_of_movement['backward'].keys()))
         self.rate_of_movement = rate_of_movement
         return rate_of_movement
 
@@ -113,9 +115,8 @@ class Bot:
             if bot_center_point is None:
                 print("Bot position not found recalculating")
                 time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
-                # TODO do inverse movement if not found for 10 sec
                 counter += 1
-                if counter % 10:
+                if counter % 10 == 0:
                     # reverse last action to detect bot
                     self.makeMovement(
                         MOVEMENT_REVERSE_DICT[self.movement], 50, update_movement=False)
@@ -137,9 +138,9 @@ class Bot:
             self.setSpeed(MOVEMENT_SPEED)
 
         if res.status_code == 200:
-            print(f"moved {movement} time:{interval}")
+            # print(f"moved {movement} time:{interval}")
             # TODO update only forward and backward?
-            if update_movement:
+            if update_movement and movement in [ 'right', 'left']:
                 self.movement = movement
 
     def setSpeed(self, speed):

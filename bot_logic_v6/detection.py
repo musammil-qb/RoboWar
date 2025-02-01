@@ -32,8 +32,8 @@ class Detection:
                 cam_ip = "192.168.226.187"
                 # cam_ip = "localhost"
 
-            # stream_url = f'http://{cam_ip}:8080/video?960x720'
-            stream_url = f'http://{cam_ip}:8080/video'
+            stream_url = f'http://{cam_ip}:8080/video?960x720'
+            # stream_url = f'http://{cam_ip}:8080/video'
             self.video_stream = VideoStream(stream_url)
 
             while True:

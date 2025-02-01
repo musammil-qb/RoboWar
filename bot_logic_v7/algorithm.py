@@ -99,17 +99,20 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             next_target_point = choose_next_target_point(intersection_points, bot_center_point)
             
             if next_target_point is not None:
-                if not score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, display=True):
+                if not score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, edge_counter, display=True):
                     continue
-            else:
+            elif strategy != "e":
+                print("no target balls")
                 defense_needed = False
                 if opponent_bot:
                     for ball in balls:
                         if calculate_distance(opponent_bot, ball) < 50 * detection.cm_to_pixel_rate:
                             defense_needed = True
                             break
-                
+                else:
+                    print("no opponent bot")
                 if defense_needed:
+                    print("defending")
                     point_of_intercept = calculate_blocking_point(
                         opponent_bot, self_goal_center_point, detection.cm_to_pixel_rate)
                     if not point_of_intercept:
@@ -120,6 +123,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     bot.updatePosition()
                     bot.move(point_of_intercept, acquire_target=False)
                 else:
+                    print("sweeping")
                     best_sweep_movement = find_best_sweep_movement(sweep_movements, balls, detection.cm_to_pixel_rate)
                     sweep(detection, best_sweep_movement, bot, display)
         
@@ -131,7 +135,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 cv2.circle(frame, possible_movement['goal_point'], 5, YELLOW, -1)
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-        if not disable_algorithm and next_target_point is None and edge_counter <=5:
+        if not disable_algorithm and next_target_point is None and strategy == "e" and edge_counter <=5:
             edge_counter += 1
             print("Targeting edge ball")
             if balls and bot_center_point:
@@ -157,7 +161,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                         bot.updatePosition()
             else:
                 print("No possible shots found")
-        else:
+        elif strategy == "e":
             print("go to default location")
             bot.updatePosition()
             bot.move(detection.default_point)

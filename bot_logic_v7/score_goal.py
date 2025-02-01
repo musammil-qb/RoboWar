@@ -7,7 +7,7 @@ from util import  is_ball_moved
 
 
 
-def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, display=True):
+def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point,edge_counter, display=True):
     print('target locked')
     target_point = next_target_point['target_point']
     goal_point = next_target_point['goal_point']
