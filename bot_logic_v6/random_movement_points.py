@@ -59,8 +59,8 @@ def random_movement_algorithm(detection, bot, strategy,defense_point_1,defense_p
             bot.move(detection.default_point,acquire_target=False)
         else:
             # bot
-            bot.makeMovement('forward',FORWARD_MOVEMENT_DELAY)
-            bot.makeMovement('backward',FORWARD_MOVEMENT_DELAY)
+            bot.makeMovement('forward',{"delay": FORWARD_MOVEMENT_DELAY})
+            bot.makeMovement('backward',{"delay": FORWARD_MOVEMENT_DELAY})
         cv2.imshow('Feed', frame)
         cv2.waitKey(SLEEP_AFTER_DISPLAYING)
     elif strategy == 'd':
@@ -98,5 +98,5 @@ def random_movement_algorithm(detection, bot, strategy,defense_point_1,defense_p
         while True:
             random_movement = RANDOM_MOVEMENT_DIRECTIONS[randint(0,len(RANDOM_MOVEMENT_DIRECTIONS)-1)]
             random_delay = randint(*RANDOM_MOVEMENT_DELAY_RANGE)
-            bot.makeMovement(random_movement, random_delay)
+            bot.makeMovement(random_movement, {"delay": random_delay})
             time.sleep(SLEEP_AFTER_MOVEMENT)

@@ -6,6 +6,8 @@ POST_ID  = 92
 OPPONENT_ARUCO_ID = 21
 OPPONENT_ARUCO_TYPE = aruco.DICT_5X5_100
 
+IS_USING_GYRO = True
+
 #  colors
 BLUE = (255, 0, 0)
 GREEN = (0, 255, 0)

@@ -128,11 +128,11 @@ class Bot:
         self.position = bot_center_point
         self.angle = bot_angle
 
-    def makeMovement(self, movement, interval, edge_rotation=False, update_movement=True):
+    def makeMovement(self, movement, params, edge_rotation=False, update_movement=True):
         if movement in ['right', 'left'] and not edge_rotation:
             self.setSpeed(ROTATION_SPEED)
 
-        res = requests.get(f"http://{self.bot_ip}/{movement}", params={"delay": interval})
+        res = requests.get(f"http://{self.bot_ip}/{movement}", params=params)
 
         if movement in ['right', 'left'] and not edge_rotation:
             self.setSpeed(MOVEMENT_SPEED)
@@ -164,6 +164,7 @@ class Bot:
                     *ORIENT_ROTATION_ERROR_ALLOWED)
             print(f"Allowed rotation error: {allowed_rotation_error}\tDistance: {distance_to_target_in_cm} distance in pixel: {distance_to_target}\t rate:{self.detection.cm_to_pixel_rate}")
             correction_count=0
+
             while rotation_needed > allowed_rotation_error and correction_count < CORRECTION_LIMIT:
                 self.makeMovement(rotation_direction, rotation_time_ms)
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
@@ -182,16 +183,16 @@ class Bot:
             for percentage in movement_correction_percent:
                 rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ =\
                       self.calculateMovement(target_point)
-                self.makeMovement(rotation_direction, rotation_time_ms)
-                self.makeMovement(travel_direction, travel_time_ms*percentage)
+                self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
+                self.makeMovement(travel_direction, {"delay": travel_time_ms*percentage})
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
                 self.updatePosition()
         elif acquire_target:
             print("go until found")
             rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ =\
                   self.calculateMovement(target_point)
-            self.makeMovement(rotation_direction, rotation_time_ms)
-            self.makeMovement(travel_direction, travel_time_ms)
+            self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
+            self.makeMovement(travel_direction, {"delay": travel_time_ms})
             time.sleep(MOVEMENT_CORRECTION_SLEEP)
             self.updatePosition()
             distance = calculate_distance(self.position, target_point)
@@ -199,8 +200,8 @@ class Bot:
             while distance > MOVEMENT_ERROR_ALLOWED and acquire_target and correction_count < CORRECTION_LIMIT:
                 rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ = \
                     self.calculateMovement(target_point)
-                self.makeMovement(rotation_direction, rotation_time_ms)
-                self.makeMovement(travel_direction, travel_time_ms)
+                self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
+                self.makeMovement(travel_direction, {"delay": travel_time_ms})
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
                 self.updatePosition()
                 distance = calculate_distance(self.position, target_point)
@@ -209,8 +210,8 @@ class Bot:
         else:
             rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ =\
                   self.calculateMovement(target_point)
-            self.makeMovement(rotation_direction, rotation_time_ms)
-            self.makeMovement(travel_direction, travel_time_ms)
+            self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
+            self.makeMovement(travel_direction, {"delay": travel_time_ms})
         return "Completed"
 
     def calculate_rotation_needed(self,bot_position,bot_angle,target_point,orientation=None):

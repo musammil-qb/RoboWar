@@ -109,7 +109,7 @@ def main():
             else:
                 delay = value * bot.get_closest_rate(value,
                                   bot.rate_of_movement[movement_dict[movement]])
-            bot.makeMovement(movement_dict[movement], delay)
+            bot.makeMovement(movement_dict[movement], {"delay": delay})
             time.sleep(SLEEP_AFTER_MOVEMENT)
             finale_bot_angle, final_bot_center_point, _, _, _ = detection.detect_aruco()
             if initial_bot_center_point is not None and final_bot_center_point is not None:
