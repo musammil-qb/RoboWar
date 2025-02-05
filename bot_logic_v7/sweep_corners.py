@@ -2,9 +2,7 @@ import numpy as np
 import cv2
 import time
 
-from const import BOT_MOVEMENT_TRIM_LENGTH, GREEN, BLUE,\
-    SWEEP_MOVEMENT_CORRECTION_PERCENTAGES, SWEEP_MOVEMENT_CORRECTION_PERCENTAGES_2, \
-    EDGE_ROTATION_DELAY
+from const import BOT_MOVEMENT_TRIM_LENGTH, GREEN, BLUE,  EDGE_ROTATION_DELAY
 from util import point_at_distance_in_a_line,\
       distance_to_line, calculate_distance
 
@@ -110,21 +108,22 @@ def sweep(detection,sweep_movement,bot,display):
         time.sleep(0.2)
         bot.move(sweep_movement['start_point'],acquire_target=False)
 
-    points = find_points_between(sweep_movement['start_point'], sweep_movement['end_point'],max_length=detection.cm_to_pixel_rate * 20)
-    for point in points:
-        bot.updatePosition()
-        bot.move(point, acquire_target=False)
+    # points = find_points_between(sweep_movement['start_point'], sweep_movement['end_point'],max_length=detection.cm_to_pixel_rate * 20)
+    # for point in points:
+    #     bot.updatePosition()
+    bot.move(sweep_movement['start_point'],acquire_target=True) 
+    bot.move(sweep_movement['end_point'], acquire_target=True)
 
     bot.makeMovement(sweep_movement['rotation'], {"delay": EDGE_ROTATION_DELAY}, edge_rotation=True)
 
 
-def find_points_between(start_point, end_point, max_length):
-    points = [start_point]
-    current_point = start_point
-    while calculate_distance(current_point, end_point) > max_length:
-        current_point = point_at_distance_in_a_line(current_point, end_point, max_length)
-        points.append(current_point)
-    if current_point != end_point:
-        points.append(end_point)
-    return points
+# def find_points_between(start_point, end_point, max_length):
+#     points = [start_point]
+#     current_point = start_point
+#     while calculate_distance(current_point, end_point) > max_length:
+#         current_point = point_at_distance_in_a_line(current_point, end_point, max_length)
+#         points.append(current_point)
+#     if current_point != end_point:
+#         points.append(end_point)
+#     return points
     

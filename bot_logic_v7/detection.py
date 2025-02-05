@@ -43,7 +43,8 @@ class Detection:
 
         self.current_mouse_position = None  # Track the mouse position for the last line
         self.field_corners = []
-        self.edge_line  = None
+        self.goal_center = None
+        self.edge_line = None
         self.goal_posts = []
         self.select_field()
         self.calculate_cm_to_pixel_rate()
@@ -57,11 +58,11 @@ class Detection:
             time.sleep(SLEEP_BEFORE_TAKING_FRAME)
         frame = self.video_stream.read()
         balls, bots, arena = self.detect_yolo(frame)
-        bot_angle, bot_center_point, goal_center_point, opponent_bot, other_aruco_codes = self.detect_aruco(frame)
+        bot_angle, bot_center_point, opponent_bot, other_aruco_codes = self.detect_aruco(frame)
         detection_object = {
             'yolo' : {'balls': balls, 'bots': bots, 'arena': arena},
             'aruco': {'bot_angle': bot_angle, 'bot_center_point': bot_center_point,
-                       'goal_center_point': goal_center_point, 'other_aruco codes': other_aruco_codes,
+                        'other_aruco codes': other_aruco_codes,
                        'opponent_bot': opponent_bot}}
         return detection_object
 
@@ -113,11 +114,11 @@ class Detection:
         markers_dict_np, markers_dict_integer = self.detect_aruco_markers(frame)
         bot_angle, bot_center_point = self.find_bot(markers_dict_integer.pop(BOT_ID)) if markers_dict_integer.get(BOT_ID) else (None,None)
         opponent_bot_angle, opponent_bot = self.find_bot(markers_dict_integer.pop(OPPONENT_ARUCO_ID)) if markers_dict_integer.get(OPPONENT_ARUCO_ID) else (None,None)
-        _, goal_center_point = self.find_bot(markers_dict_integer.pop(POST_ID)) if markers_dict_integer.get(POST_ID) else (None,None)
+        # _, goal_center_point = self.find_bot(markers_dict_integer.pop(POST_ID)) if markers_dict_integer.get(POST_ID) else (None,None)
         self.detection_object['aruco'] = {'bot_angle': bot_angle, 'bot_center_point': bot_center_point,
-                       'goal_center_point': goal_center_point, 'other_aruco_codes': markers_dict_integer,
+                       'other_aruco_codes': markers_dict_integer,
                        'opponent_bot_angle': opponent_bot_angle, 'opponent_bot': opponent_bot}
-        return bot_angle, bot_center_point, goal_center_point, opponent_bot, markers_dict_integer
+        return bot_angle, bot_center_point, opponent_bot, markers_dict_integer
 
     def detect_aruco_markers(self,frame, draw_corners=False):
         aruco_type = cv2.aruco.DICT_4X4_100
@@ -166,49 +167,76 @@ class Detection:
 
     def select_field(self):
         file_path = 'corners.json'
+        # Try to load existing data
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
-                self.field_corners = json.load(f)
-        else:
+                data = json.load(f)
+                self.field_corners = data.get('corners', [])
+                self.goal_center = data.get('goal_center')
+        
+        # Select corners if needed
+        if not self.field_corners:
             cv2.namedWindow("Feed")
             cv2.setMouseCallback("Feed", self.select_corners)
             print("Select 4 corners of the field")
-
-            while True:
+            
+            while len(self.field_corners) < 4:
                 if SLEEP_BEFORE_TAKING_FRAME:
                     time.sleep(SLEEP_BEFORE_TAKING_FRAME)
                     
                 frame = self.video_stream.read()
-
-                # Draw selected points and lines connecting them
+                
+                # Draw selected points and lines
                 for i, point in enumerate(self.field_corners):
-                    # Draw each selected point
                     cv2.circle(frame, point, 5, (0, 0, 255), -1)  # Red dot
-
-                    # Draw lines between consecutive points
                     if i > 0:
-                        cv2.line(frame, self.field_corners[i - 1], point, (255, 0, 0), 2)  # Blue line between points
+                        cv2.line(frame, self.field_corners[i - 1], point, (255, 0, 0), 2)
                 
-                # Draw line from the last selected point to the current mouse position
+                # Draw goal center if available
+                if self.goal_center:
+                    cv2.circle(frame, self.goal_center, 5, (0, 255, 0), -1)  # Green dot
+                
+                # Draw line to mouse position
                 if len(self.field_corners) > 0 and self.current_mouse_position:
-                    last_point = self.field_corners[-1]
-                    cv2.line(frame, last_point, self.current_mouse_position, (0, 255, 0), 1)  # Green line to mouse
-                
-                # Display the video frame
+                    cv2.line(frame, self.field_corners[-1], self.current_mouse_position, (0, 255, 0), 1)
                 cv2.imshow("Feed", frame)
-
-                if len(self.field_corners) == 4:
-                    with open(file_path, 'w') as f:
-                        json.dump(self.field_corners, f)
-                    break
-
-                # Exit loop if 'q' is pressed
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
-
                 time.sleep(SLEEP_CORNER_SELECTION_LOOP)
+        
+        # Select goal center if needed
+        if not self.goal_center:
+            cv2.namedWindow("Feed")
+            cv2.setMouseCallback("Feed", self.select_goal_center)
+            print("Now click on the goal center point")
             
-            cv2.destroyAllWindows()
+            while self.goal_center is None:
+                if SLEEP_BEFORE_TAKING_FRAME:
+                    time.sleep(SLEEP_BEFORE_TAKING_FRAME)
+                    
+                frame = self.video_stream.read()
+                
+                # Draw field corners
+                for i, point in enumerate(self.field_corners):
+                    cv2.circle(frame, point, 5, (0, 0, 255), -1)
+                    if i > 0:
+                        cv2.line(frame, self.field_corners[i - 1], point, (255, 0, 0), 2)
+                cv2.line(frame, self.field_corners[-1], self.field_corners[0], (255, 0, 0), 2)
+                
+                cv2.imshow("Feed", frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                time.sleep(SLEEP_CORNER_SELECTION_LOOP)
+        
+        # Save the complete data
+        if self.field_corners and self.goal_center:
+            with open(file_path, 'w') as f:
+                json.dump({
+                    'corners': self.field_corners,
+                    'goal_center': self.goal_center
+                }, f)
+        
+        cv2.destroyAllWindows()
 
     def select_corners(self, event, x, y, flags, param):
         if event == cv2.EVENT_MOUSEMOVE:
@@ -218,6 +246,11 @@ class Detection:
             if len(self.field_corners) < 4:
                 self.field_corners.append((x, y))
                 print(f"Corner {len(self.field_corners)} selected at ({x}, {y})")
+
+    def select_goal_center(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.goal_center = (x, y)
+            print(f"Goal center selected at ({x}, {y})")
 
     def calculate_cm_to_pixel_rate(self):
         field_length = (calculate_distance(
@@ -276,16 +309,8 @@ class Detection:
             {'post_center_point': (np.array(self.field_corners[3])+np.array(self.field_corners[0]))/2,
              'edge': [tuple(self.field_corners[3]), tuple(self.field_corners[0])]}
         ]
-        goal_aruco_center = None
-        while goal_aruco_center is None:
-            print("getting goal center point")
-            _, _, goal_aruco_center, _, _= self.detect_aruco()
-            time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
-            frame = self.video_stream.latest_frame
-            cv2.imshow('goal center finding', frame)
-            cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-        cv2.destroyWindow('goal center finding')
-        closest_edge, _, _ = find_closest_edge(goal_aruco_center, list(
+        
+        closest_edge, _, _ = find_closest_edge(self.goal_center, list(
             map(lambda x: x['edge'], side_edge_and_midpoint)))
         if closest_edge == side_edge_and_midpoint[0]['edge']:
             opponent_edge = 0

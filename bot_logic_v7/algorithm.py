@@ -3,7 +3,7 @@ import cv2
 
 from targetDetection import filter_balls, choose_next_target_point
 from util import draw_polygons, calculate_distance
-from edge_logic_new import find_target_and_direction
+from edge_logic_new import find_target_and_direction,edge_move
 from random_movement_points import random_movement_algorithm, get_defense_points
 from score_goal import score_goal
 from defense import calculate_blocking_point
@@ -43,7 +43,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     bot_movement_trimmed_field = detection.bot_movement_trimmed_field
     defense_point_1, defense_point_2, defense_center = get_defense_points(detection)
     strategy = input("Enter staring strategy to start: ")
-    random_movement_algorithm(detection, bot, strategy,defense_point_1,defense_point_2, defense_center)
+    # random_movement_algorithm(detection, bot, strategy,defense_point_1,defense_point_2, defense_center)
     edge_counter = 0
     while True:
         filtered_balls, intersection_points = [], []
@@ -101,7 +101,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             if next_target_point is not None:
                 if not score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, edge_counter, display=True):
                     continue
-            elif strategy != "e":
+            else:
                 print("no target balls")
                 defense_needed = False
                 if opponent_bot:
@@ -122,10 +122,19 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     
                     bot.updatePosition()
                     bot.move(point_of_intercept, acquire_target=False)
-                else:
+                elif "s" in strategy:
                     print("sweeping")
                     best_sweep_movement = find_best_sweep_movement(sweep_movements, balls, detection.cm_to_pixel_rate)
                     sweep(detection, best_sweep_movement, bot, display)
+                else:
+                    edge_counter += 1
+                    print("Targeting edge ball")
+                    if balls and bot_center_point:
+                        edge_move(balls, bot_center_point, field_corners, goal_center_point, 
+                                  self_goal_center_point, self_edge, opponent_edge,detection,bot,display=True)
+                    else:
+                        print("No possible movement found")
+
         
         if display and test and not disable_algorithm:
             for ball in filtered_balls:

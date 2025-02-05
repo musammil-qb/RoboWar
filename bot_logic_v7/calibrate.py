@@ -93,7 +93,7 @@ def main():
             print("Exiting...")
             break
         elif pressed_key == ord('d'):
-            bot_angle, bot_center_point, _, _, _ = detection.detect_aruco()
+            bot_angle, bot_center_point, _, _ = detection.detect_aruco()
             # cv2.circle(frame,bot_center_point,3,GREEN,-1)
             print(bot_angle, bot_center_point)
         elif pressed_key == ord('c'):
@@ -111,7 +111,7 @@ def main():
                                   bot.rate_of_movement[movement_dict[movement]])
             bot.makeMovement(movement_dict[movement], {"delay": delay})
             time.sleep(SLEEP_AFTER_MOVEMENT)
-            finale_bot_angle, final_bot_center_point, _, _, _ = detection.detect_aruco()
+            finale_bot_angle, final_bot_center_point, _, _ = detection.detect_aruco()
             if initial_bot_center_point is not None and final_bot_center_point is not None:
                 distance_difference =calculate_distance(final_bot_center_point,initial_bot_center_point)
             else:
