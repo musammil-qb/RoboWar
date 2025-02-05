@@ -106,7 +106,7 @@ def sweep(detection,sweep_movement,bot,display):
     bot.move(sweep_movement['start_point'])
     if sweep_movement['idx']!=0:
         bot.updatePosition()
-        bot.makeMovement(sweep_movement['rotation'], EDGE_ROTATION_DELAY,edge_rotation=True)
+        bot.makeMovement(sweep_movement['rotation'], {"delay": EDGE_ROTATION_DELAY}, edge_rotation=True)
         time.sleep(0.2)
         bot.move(sweep_movement['start_point'],acquire_target=False)
 
@@ -115,7 +115,7 @@ def sweep(detection,sweep_movement,bot,display):
         bot.updatePosition()
         bot.move(point, acquire_target=False)
 
-    bot.makeMovement(sweep_movement['rotation'], EDGE_ROTATION_DELAY, edge_rotation=True)
+    bot.makeMovement(sweep_movement['rotation'], {"delay": EDGE_ROTATION_DELAY}, edge_rotation=True)
 
 
 def find_points_between(start_point, end_point, max_length):

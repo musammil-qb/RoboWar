@@ -128,11 +128,11 @@ class Bot:
         self.position = bot_center_point
         self.angle = bot_angle
 
-    def makeMovement(self, movement, interval, edge_rotation=False, update_movement=True):
+    def makeMovement(self, movement, params, edge_rotation=False, update_movement=True):
         if movement in ['right', 'left'] and not edge_rotation:
             self.setSpeed(ROTATION_SPEED)
 
-        res = requests.get(f"http://{self.bot_ip}/{movement}", params={"delay": interval})
+        res = requests.get(f"http://{self.bot_ip}/{movement}", params=params)
 
         if movement in ['right', 'left'] and not edge_rotation:
             self.setSpeed(MOVEMENT_SPEED)

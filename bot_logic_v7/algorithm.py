@@ -155,7 +155,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                     bot.move(target_point)
                     time.sleep(SLEEP_AFTER_MOVEMENT)
                     if edge_movement_direction in ["right","left"]:
-                        bot.makeMovement(edge_movement_direction, EDGE_ROTATION_DELAY,edge_rotation=True)
+                        bot.makeMovement(edge_movement_direction, {"delay": EDGE_ROTATION_DELAY},edge_rotation=True)
                     else:
                         bot.move(closest_ball)
                         bot.updatePosition()
