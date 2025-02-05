@@ -153,7 +153,7 @@ class Bot:
         if res.status_code != 200:
             print("Bot movement failed communication issue")
 
-    def move(self, target_point, acquire_target=True, orient_only=False, ram=False, allowed_rotation_error=0, orientation=None,weighted_movement=True):
+    def move(self, target_point, acquire_target=True, orient_only=False, ram=False, allowed_rotation_error=0, orientation=None,weighted_movement=True, ball=None, check_ball_movement=False):
         if target_point is None or self.position is None:
             print(
                 f"target point or position failed target point:{target_point}  bot center point:{self.position}")
@@ -178,12 +178,14 @@ class Bot:
                     rotation_time_ms, rotation_direction, _, _, rotation_needed, distance_to_target=\
                     self.calculateMovement(target_point,orientation=orientation)
                     correction_count+=1
+            return "Completed"
         elif ram:
             _, _, travel_direction, travel_time_ms, _, _ =\
         self.calculateMovement(target_point)
             self.makeMovement(travel_direction, {"delay": travel_time_ms})
             time.sleep(MOVEMENT_CORRECTION_SLEEP)
             self.updatePosition()
+            return "Completed"
         elif acquire_target and weighted_movement:
             # Calculate distance to target in cm
             _, _, _, _, _, distance_to_target = self.calculateMovement(target_point)
@@ -200,7 +202,7 @@ class Bot:
                 correction_percentages = MOVEMENT_CORRECTION_PERCENTAGES_MAP[max(MOVEMENT_CORRECTION_PERCENTAGES_MAP.keys())]
             
             print(f"weighted movement distance: {round(distance_to_target_in_cm)} percentages: {correction_percentages}")
-            for percentage in correction_percentages:
+            for  percentage in correction_percentages:
                 rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, rotation_needed, _ =\
                       self.calculateMovement(target_point)
                 if IS_USING_GYRO:
@@ -210,6 +212,14 @@ class Bot:
                 self.makeMovement(travel_direction, {"delay": travel_time_ms*percentage})
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
                 self.updatePosition()
+                
+                # Check for ball movement if requested
+                if check_ball_movement and ball is not None:
+                    detection_object = self.detection.process_frame()
+                    if is_ball_moved(detection_object['yolo']['balls'], ball, self.detection.cm_to_pixel_rate):
+                        print("ball moved during weighted movement")
+                        return "Ball moved"
+            return "Completed"
         elif acquire_target:
             print("go until found")
             rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, rotation_needed, _ =\

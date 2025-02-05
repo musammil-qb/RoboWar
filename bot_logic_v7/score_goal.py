@@ -35,13 +35,18 @@ def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
         bot.updatePosition()
-        bot.move(target_point,acquire_target=True)
+        # Move to target with ball movement check
+        movement_result = bot.move(target_point, acquire_target=True, ball=ball, check_ball_movement=True)
+        if movement_result == "Ball moved":
+            return False
     elif bot:
         bot.updatePosition()
-        bot.move(pit_stop,acquire_target=False)
+        bot.move(pit_stop, acquire_target=False)
         time.sleep(SLEEP_AFTER_MOVEMENT)
         bot.updatePosition()
-        bot.move(target_point,acquire_target=True)
+        movement_result = bot.move(target_point, acquire_target=True, ball=ball, check_ball_movement=True)
+        if movement_result == "Ball moved":
+            return False
     time.sleep(SLEEP_AFTER_MOVEMENT)
 
     # input("test ball movement:")
