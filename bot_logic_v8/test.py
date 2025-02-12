@@ -8,7 +8,28 @@ from algorithm import algorithm
 from util import draw_polygons
 from const import BLUE, GREEN, SLEEP_ARUCO_NOT_FOUND_RECALCULATE
 
-def main(image_path=None, video_path=None, disable_bot=True,disable_algorithm=False):
+"""
+Main test module for robot soccer system.
+
+This module provides the main entry point for testing the robot soccer system.
+It handles initialization of detection and bot systems, and runs the main algorithm.
+
+Functions:
+    main: Main test function that initializes and runs the system
+"""
+
+def main(image_path=None, video_path=None, disable_bot=True, disable_algorithm=False):
+    """
+    Main test function for robot soccer system.
+
+    Initializes detection and bot systems, and runs the main algorithm.
+
+    Args:
+        image_path (str, optional): Path to image file for testing
+        video_path (str, optional): Path to video file for testing
+        disable_bot (bool): Whether to disable bot control
+        disable_algorithm (bool): Whether to disable algorithm execution
+    """
 
     # Handle image or video input
     if image_path:

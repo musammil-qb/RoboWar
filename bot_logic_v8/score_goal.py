@@ -5,7 +5,15 @@ from collision_avoidance import find_pit_stop_to_avoid_ball, is_collision_chance
 import time
 from util import  is_ball_moved
 
+"""
+Goal scoring module for robot soccer system.
 
+This module contains functions for scoring goals and
+handling goal-related movement strategies.
+
+Functions:
+    score_goal: Execute goal scoring strategy
+"""
 
 def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point,edge_counter, display=True):
     print('target locked')
@@ -19,9 +27,11 @@ def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement
         cv2.imshow('Feed', frame)
         cv2.waitKey(SLEEP_AFTER_DISPLAYING)
     time.sleep(SLEEP_BEFORE_GOAL)
+    # check if there is a collision chance
     is_collision_chance, closest_point_on_line = is_collision_chance_closest_point(
         bot_center_point, target_point, ball, detection.cm_to_pixel_rate)
     if is_collision_chance:
+        # find the pit stop to avoid the ball
         pit_stop = find_pit_stop_to_avoid_ball(
             bot_center_point, target_point, closest_point_on_line, bot_movement_trimmed_field, detection.cm_to_pixel_rate)
     if is_collision_chance:
@@ -49,7 +59,6 @@ def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement
             return False
     time.sleep(SLEEP_AFTER_MOVEMENT)
 
-    # input("test ball movement:")
     detection_object = detection.process_frame()
     if is_ball_moved(detection_object['yolo']['balls'], ball,detection.cm_to_pixel_rate):
         # abort

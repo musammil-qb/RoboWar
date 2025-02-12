@@ -6,8 +6,48 @@ import requests
 from util import *
 from const import *
 
+"""
+Bot control module for robot soccer system.
+
+This module contains the Bot class which handles all robot movement, calibration,
+and position tracking functionality. It interfaces with the physical robot via
+HTTP requests and uses computer vision data for navigation.
+
+Classes:
+    Bot: Main robot control class that handles movement, calibration, and positioning.
+"""
 
 class Bot:
+    """
+    Main robot control class.
+
+    Handles all robot movement, calibration, and position tracking functionality.
+    Interfaces with physical robot via HTTP requests and uses computer vision data.
+
+    Attributes:
+        bot_ip (str): IP address of the robot
+        position (tuple): Current position of the robot (x,y)
+        angle (float): Current orientation angle of the robot
+        movement (str): Current movement state
+        speed (int): Current movement speed
+        detection (Detection): Computer vision detection object
+        command (dict): Current movement command parameters
+        rate_of_movement (dict): Calibration data for movement rates
+
+    Methods:
+        __init__: Initialize bot with position, angle and detection
+        goto_initial_position: Move bot to default starting position
+        calibrate: Calibrate bot movement parameters
+        caliberateMovement: Calibrate movement in specific direction
+        getPositionAndAngle: Get current position and angle from detection
+        updatePosition: Update bot's position and angle
+        makeMovement: Send movement command to bot
+        setSpeed: Set bot's movement speed
+        move: Move bot to target point with optional parameters
+        calculate_rotation_needed: Calculate required rotation to face target
+        calculateMovement: Calculate movement parameters to reach target
+        get_closest_rate: Get closest calibration rate for given target
+    """
     def __init__(self, position, angle, detection, calibrate=True):
         # todo
         self.bot_ip = input("Enter Bot ip: ")
@@ -154,6 +194,31 @@ class Bot:
             print("Bot movement failed communication issue")
 
     def move(self, target_point, acquire_target=True, orient_only=False, ram=False, allowed_rotation_error=0, orientation=None,weighted_movement=True, ball=None, check_ball_movement=False):
+        """
+        Move the bot to a target point with various movement options.
+
+        Args:
+            target_point (tuple): The (x,y) coordinates of the target point to move to
+            acquire_target (bool, optional): Whether to perform target acquisition and correction. 
+                Defaults to True. When False, bot moves directly to target without corrections.
+            orient_only (bool, optional): Whether to only orient the bot towards the target 
+                without moving forward/backward. Defaults to False.
+            ram (bool, optional): Whether to perform a direct movement without corrections.
+                Defaults to False. When True, bot moves directly to target at full speed.
+            allowed_rotation_error (int, optional): Allowed error in degrees for orientation.
+                Defaults to 0. Higher values allow less precise orientation.
+            orientation (str, optional): Specific orientation to face ('forward' or 'backward').
+                Defaults to None, which calculates optimal orientation.
+            weighted_movement (bool, optional): Whether to use weighted movement corrections.
+                Defaults to True. When True, applies multiple correction steps.
+            ball (tuple, optional): (x,y) coordinates of ball to check for movement.
+                Defaults to None. Used with check_ball_movement.
+            check_ball_movement (bool, optional): Whether to check if ball has moved during movement.
+                Defaults to False. When True, aborts movement if ball moves.
+
+        Returns:
+            str: Movement status ("Completed" or "Ball moved" if check_ball_movement is True)
+        """
         if target_point is None or self.position is None:
             print(
                 f"target point or position failed target point:{target_point}  bot center point:{self.position}")

@@ -1,3 +1,15 @@
+"""
+Constants module for robot soccer system.
+
+This module contains all system-wide constants including:
+- Aruco marker IDs
+- Movement parameters
+- Color definitions
+- Timing constants
+- Field dimensions
+- Configuration flags
+"""
+
 import cv2.aruco as aruco
 # Arucode Ids
 BOT_ID = 69

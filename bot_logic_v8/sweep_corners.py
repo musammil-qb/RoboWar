@@ -6,6 +6,16 @@ from const import BOT_MOVEMENT_TRIM_LENGTH, GREEN, BLUE,  EDGE_ROTATION_DELAY
 from util import point_at_distance_in_a_line,\
       distance_to_line, calculate_distance
 
+"""
+Corner sweeping module for robot soccer system.
+
+This module contains functions for sweeping field corners
+to find and collect balls.
+
+Functions:
+    find_best_sweep_movement: Find best sweep movement based on ball positions
+"""
+
 def find_sweep_movements(detection):
     sweep_corners = detection.bot_movement_trimmed_field
     sweep_movements = generate_sweep_points(

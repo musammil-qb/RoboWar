@@ -3,6 +3,24 @@ import cv2
 import numpy as np
 from const import GREEN,BALL_MOVEMENT_BUFFER
 
+"""
+Utility functions module for robot soccer system.
+
+This module contains various utility functions used throughout the system,
+including geometry calculations, point operations, and movement calculations.
+
+Functions:
+    calculate_distance: Calculate distance between two points
+    calculate_angle_to_point: Calculate angle to target point
+    find_closest_edge: Find closest edge to a point
+    find_closest_corner: Find closest corner to a point
+    is_point_inside_border: Check if point is inside polygon
+    map_rotation_range: Map rotation value from one range to another
+    is_ball_moved: Check if ball has moved from its position
+    distance_to_segment: Calculate distance to segment
+    distance_to_line: Calculate distance to line
+"""
+
 # Function to calculate the distance between two points
 def calculate_distance(point1, point2):
     return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)

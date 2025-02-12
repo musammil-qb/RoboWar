@@ -9,6 +9,16 @@ from const import FORWARD_OFFENCE_POINT_DISTANCE_AFTER_CENTER, IS_ARUCO_WORKING,
     SLEEP_AFTER_DEFENSE, YELLOW, DEFENSE_LOOP_MOVEMENTS, DEFENSE_INITIAL_MOVEMENTS, \
     RANDOM_MOVEMENT_DELAY_RANGE, RANDOM_MOVEMENT_DIRECTIONS, RANDOM_MOVEMENT_SPEED, SLEEP_AFTER_MOVEMENT
 
+"""
+Random movement algorithm module for robot soccer system.
+
+This module contains functions for generating random movement points and
+executing random movement strategies for the robot.
+
+Functions:
+    get_forward_goal_point: Calculate forward goal point from default position
+    random_movement_algorithm: Execute random movement strategy
+"""
 
 def get_forward_goal_point(detection):
     start_point = detection.default_point

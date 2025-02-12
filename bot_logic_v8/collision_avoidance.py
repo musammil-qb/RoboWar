@@ -16,3 +16,16 @@ def find_pit_stop_to_avoid_ball(bot_center_point, target_point, closest_point, b
     if is_point_inside_border(secondary_point1, np.array(bot_movement_trimmed_field)):
         return secondary_point1
     return secondary_point2
+
+
+"""
+Collision avoidance module for robot soccer system.
+
+This module contains functions for detecting and avoiding
+collisions with balls and other objects.
+
+    is_collision_chance_closest_point: Check if collision is likely
+ and return the closest point of collision
+    find_pit_stop_to_avoid_ball: Find safe point to avoid collision
+"""
+

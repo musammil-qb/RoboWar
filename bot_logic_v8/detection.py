@@ -16,6 +16,20 @@ from const import BOT_ID, POST_ID, FIELD_LENGTH, FIELD_WIDTH, \
     SLEEP_ARUCO_NOT_FOUND_RECALCULATE, SLEEP_BEFORE_TAKING_FRAME,SLEEP_AFTER_DISPLAYING, \
     OPPONENT_ARUCO_ID, OPPONENT_ARUCO_TYPE
 
+"""
+Computer vision detection module for robot soccer system.
+
+This module handles all computer vision tasks including:
+- Field detection
+- Ball detection
+- Robot detection
+- Aruco marker detection
+
+Classes:
+    Detection: Main detection class
+    VideoStream: Video stream handling class
+"""
+
 class Detection:
     def __init__(self,image_path=None, video_path=None):
         print("Initializing detection...")

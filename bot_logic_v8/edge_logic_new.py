@@ -103,3 +103,14 @@ def edge_move(balls, bot_center_point, field_corners,
             # bot.updatePosition()
             bot.makeMovement('right', {"delay": EDGE_ROTATION_DELAY},edge_rotation=True)
             # bot.move(closest_ball)
+
+"""
+Edge handling logic module for robot soccer system.
+
+This module contains functions for handling edge cases and
+calculating movement near field edges.
+
+Functions:
+    find_target_and_direction: Find target point and movement direction
+    edge_move: Execute edge movement strategy
+"""
