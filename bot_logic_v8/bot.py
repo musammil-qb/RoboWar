@@ -111,7 +111,7 @@ class Bot:
         bot_center_point = None
         counter = 0
         while bot_center_point is None:
-            bot_angle, bot_center_point, _, _, _ = self.detection.detect_aruco()
+            bot_angle, bot_center_point, _, _ = self.detection.detect_aruco()
             if bot_center_point is None:
                 print("Bot position not found recalculating")
                 time.sleep(SLEEP_ARUCO_NOT_FOUND_RECALCULATE)
@@ -129,18 +129,23 @@ class Bot:
         self.angle = bot_angle
 
     def makeMovement(self, movement, params, edge_rotation=False, update_movement=True):
-        if movement in ['right', 'left'] and not edge_rotation:
+        if movement in ['right', 'left'] and not edge_rotation: 
             self.setSpeed(ROTATION_SPEED)
-
+        else:
+            self.setSpeed(MOVEMENT_SPEED)
+    
         res = requests.get(f"http://{self.bot_ip}/{movement}", params=params)
 
-        if movement in ['right', 'left'] and not edge_rotation:
+        if movement in ['right', 'left'] and not edge_rotation :
             self.setSpeed(MOVEMENT_SPEED)
 
         if res.status_code == 200:
             # TODO update only forward and backward?
-            if update_movement and movement in [ 'right', 'left']:
+            if update_movement and movement not in [ 'right', 'left']:
                 self.movement = movement
+        else:
+            print(f"http request failed {res.status_code}")
+            print(f"http://{self.bot_ip}/{movement}", params)
 
     def setSpeed(self, speed):
         self.speed = speed
@@ -148,7 +153,7 @@ class Bot:
         if res.status_code != 200:
             print("Bot movement failed communication issue")
 
-    def move(self, target_point, acquire_target=True, orient_only=False, ram=False, allowed_rotation_error=0, orientation=None,movement_correction_percent = MOVEMENT_CORRECTION_PERCENTAGES):
+    def move(self, target_point, acquire_target=True, orient_only=False, ram=False, allowed_rotation_error=0, orientation=None,weighted_movement=True, ball=None, check_ball_movement=False):
         if target_point is None or self.position is None:
             print(
                 f"target point or position failed target point:{target_point}  bot center point:{self.position}")
@@ -163,42 +168,80 @@ class Bot:
                     *ORIENT_ROTATION_ERROR_ALLOWED)
             print(f"Allowed rotation error: {allowed_rotation_error}\tDistance: {distance_to_target_in_cm} distance in pixel: {distance_to_target}\t rate:{self.detection.cm_to_pixel_rate}")
             correction_count=0
-            while rotation_needed > allowed_rotation_error and correction_count < CORRECTION_LIMIT:
-                self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
-                time.sleep(MOVEMENT_CORRECTION_SLEEP)
-                self.updatePosition()
-                rotation_time_ms, rotation_direction, _, _, rotation_needed, distance_to_target=\
-                self.calculateMovement(target_point,orientation=orientation)
-                correction_count+=1
+            if IS_USING_GYRO:
+                self.makeMovement("rotate", {"angle": rotation_needed, "direction": rotation_direction, "angle_tolerance": allowed_rotation_error})
+            else:
+                while rotation_needed > allowed_rotation_error and correction_count < CORRECTION_LIMIT:
+                    self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
+                    time.sleep(MOVEMENT_CORRECTION_SLEEP)
+                    self.updatePosition()
+                    rotation_time_ms, rotation_direction, _, _, rotation_needed, distance_to_target=\
+                    self.calculateMovement(target_point,orientation=orientation)
+                    correction_count+=1
+            return "Completed"
         elif ram:
             _, _, travel_direction, travel_time_ms, _, _ =\
         self.calculateMovement(target_point)
             self.makeMovement(travel_direction, {"delay": travel_time_ms})
             time.sleep(MOVEMENT_CORRECTION_SLEEP)
             self.updatePosition()
-        elif movement_correction_percent and acquire_target:
-            print("weighted movement")
-            for percentage in movement_correction_percent:
-                rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ =\
+            return "Completed"
+        elif acquire_target and weighted_movement:
+            # Calculate distance to target in cm
+            _, _, _, _, _, distance_to_target = self.calculateMovement(target_point)
+            distance_to_target_in_cm = distance_to_target / self.detection.cm_to_pixel_rate
+            
+            # Select appropriate correction percentages based on distance
+            correction_percentages = None
+            for threshold in sorted(MOVEMENT_CORRECTION_PERCENTAGES_MAP.keys()):
+                if distance_to_target_in_cm <= threshold:
+                    correction_percentages = MOVEMENT_CORRECTION_PERCENTAGES_MAP[threshold]
+                    break
+            # Use the highest threshold percentages if distance exceeds all thresholds
+            if correction_percentages is None:
+                correction_percentages = MOVEMENT_CORRECTION_PERCENTAGES_MAP[max(MOVEMENT_CORRECTION_PERCENTAGES_MAP.keys())]
+            
+            print(f"weighted movement distance: {round(distance_to_target_in_cm)} percentages: {correction_percentages}")
+            for  percentage in correction_percentages:
+                rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, rotation_needed, _ =\
                       self.calculateMovement(target_point)
-                self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
+                if IS_USING_GYRO:
+                    self.makeMovement("rotate", {"angle": rotation_needed, "direction": rotation_direction, "angle_tolerance": ALLOWED_ROTATION_ERROR})
+                else:
+                    self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
                 self.makeMovement(travel_direction, {"delay": travel_time_ms*percentage})
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
                 self.updatePosition()
+                
+                # Check for ball movement if requested
+                if check_ball_movement and ball is not None:
+                    detection_object = self.detection.process_frame()
+                    if is_ball_moved(detection_object['yolo']['balls'], ball, self.detection.cm_to_pixel_rate):
+                        print("ball moved during weighted movement")
+                        return "Ball moved"
+            return "Completed"
         elif acquire_target:
             print("go until found")
-            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ =\
+            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, rotation_needed, _ =\
                   self.calculateMovement(target_point)
-            self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
+            if IS_USING_GYRO:
+                self.makeMovement("rotate", {"angle": rotation_needed, "direction": rotation_direction, "angle_tolerance": ALLOWED_ROTATION_ERROR})
+                # time.sleep(1)
+            else:
+                self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
             self.makeMovement(travel_direction, {"delay": travel_time_ms})
             time.sleep(MOVEMENT_CORRECTION_SLEEP)
             self.updatePosition()
             distance = calculate_distance(self.position, target_point)
             correction_count = 0
             while distance > MOVEMENT_ERROR_ALLOWED and acquire_target and correction_count < CORRECTION_LIMIT:
-                rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ = \
+                rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, rotation_needed, _ = \
                     self.calculateMovement(target_point)
-                self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
+                if IS_USING_GYRO:
+                    self.makeMovement("rotate", {"angle": rotation_needed, "direction": rotation_direction, "angle_tolerance": ALLOWED_ROTATION_ERROR})
+                    # time.sleep(1)
+                else:
+                    self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
                 self.makeMovement(travel_direction, {"delay": travel_time_ms})
                 time.sleep(MOVEMENT_CORRECTION_SLEEP)
                 self.updatePosition()
@@ -206,9 +249,12 @@ class Bot:
                 print(f"Distance diffrence: {distance} correcting")
                 correction_count+=1
         else:
-            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, _, _ =\
+            rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, rotation_needed, _ =\
                   self.calculateMovement(target_point)
-            self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
+            if IS_USING_GYRO:
+                self.makeMovement("rotate", {"angle": rotation_needed, "direction": rotation_direction, "angle_tolerance": ALLOWED_ROTATION_ERROR})
+            else:
+                self.makeMovement(rotation_direction, {"delay": rotation_time_ms})
             self.makeMovement(travel_direction, {"delay": travel_time_ms})
         return "Completed"
 
