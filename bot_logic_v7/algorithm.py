@@ -6,7 +6,7 @@ from util import draw_polygons, calculate_distance
 from edge_logic_new import find_target_and_direction,edge_move
 from random_movement_points import random_movement_algorithm, get_defense_points
 from score_goal import score_goal
-from defense import calculate_blocking_point
+from defense import calculate_blocking_point, check_defense_needed
 from sweep_corners import find_sweep_movements, sweep, find_best_sweep_movement
 from const import BLUE, GREEN, RED,  YELLOW, \
     SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, \
@@ -99,29 +99,12 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 buffer_distance=int(EXTENDED_POINT_OFFSET*detection.cm_to_pixel_rate))
             next_target_point = choose_next_target_point(intersection_points, bot_center_point)
             
-            if next_target_point is not None:
+            defense_needed, defense_ball,defense_start_time = check_defense_needed(opponent_bot, balls, detection, defense_start_time)
+            if next_target_point is not None and (not defense_needed or defense_start_time is None):
                 if not score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, edge_counter, display=True):
                     continue
-            else:
-                print("no target balls")
-                defense_needed = False
-                if opponent_bot:
-                    # Check if any balls are within 50cm of opponent bot
-                    balls_near_opponent, defense_ball = False, None
-                    for defense_ball in balls:
-                        if calculate_distance(opponent_bot, defense_ball) < 50 * detection.cm_to_pixel_rate:
-                            balls_near_opponent = True
-                            defense_needed = True
-                            break
-                    
-                    # Only maintain cooldown if balls are near opponent
-                    if defense_start_time is not None and current_time - defense_start_time <= DEFENSE_COOLDOWN:
-                        if balls_near_opponent:
-                            defense_needed = True
-                        else:
-                            defense_start_time = None  # Reset cooldown if no balls near opponent
-                else:
-                    print("no opponent bot")
+
+            elif defense_needed:
                 if display:
                     frame = detection.video_stream.read()
                     for ball in balls:
@@ -131,28 +114,33 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                             cv2.circle(frame, ball, 5, BLUE, -1)
                     cv2.imshow('Feed', frame)
                     cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-
-                if defense_needed:
-                    current_time = time.time()
-                    if defense_start_time is None:
-                        defense_start_time = current_time
-                        
-                    if current_time - defense_start_time <= DEFENSE_COOLDOWN:
-                        print(f"defending (cooldown: {DEFENSE_COOLDOWN - (current_time - defense_start_time):.1f}s remaining)")
-                    else:
-                        defense_start_time = None
-                        
-                    point_of_intercept = calculate_blocking_point(
-                        opponent_bot, self_goal_center_point, detection.cm_to_pixel_rate)
-                    if not point_of_intercept:
-                        bot.updatePosition()
-                        bot.move(defense_point_1, acquire_target=False)
-                        point_of_intercept = detection.default_point
+                current_time = time.time()
+                if defense_start_time is None:
+                    defense_start_time = current_time
                     
+                print(f"defending (cooldown: {DEFENSE_COOLDOWN - (current_time - defense_start_time):.1f}s remaining)")
+                point_of_intercept = calculate_blocking_point(
+                    opponent_bot, self_goal_center_point, detection.cm_to_pixel_rate)
+                if not point_of_intercept:
                     bot.updatePosition()
-                    bot.move(point_of_intercept, acquire_target=False)
-                    
-                elif "s" in strategy:
+                    bot.move(defense_point_1, acquire_target=False)
+                    point_of_intercept = detection.default_point
+                
+                bot.updatePosition()
+                bot.move(point_of_intercept, acquire_target=False)
+                continue
+
+            else:
+                print("no target balls or defense needed")
+                
+                if display:
+                    frame = detection.video_stream.read()
+                    for ball in balls:
+                        cv2.circle(frame, ball, 5, BLUE, -1)
+                    cv2.imshow('Feed', frame)
+                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
+
+                if "s" in strategy:
                     print("sweeping")
                     best_sweep_movement = find_best_sweep_movement(sweep_movements, balls, detection.cm_to_pixel_rate)
                     sweep(detection, best_sweep_movement, bot, display)

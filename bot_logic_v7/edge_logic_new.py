@@ -94,10 +94,12 @@ def edge_move(balls, bot_center_point, field_corners,
         cv2.waitKey(SLEEP_AFTER_DISPLAYING)
     if bot:
         bot.updatePosition()
-        bot.move(target_point)
+        status = bot.move(target_point,ball=closest_ball, check_ball_movement=True)
+
         time.sleep(SLEEP_AFTER_MOVEMENT)
         if edge_movement_direction in ["right","left"]:
             bot.makeMovement(edge_movement_direction, {"delay": EDGE_ROTATION_DELAY},edge_rotation=True)
         else:
-            bot.updatePosition()
-            bot.move(closest_ball)
+            # bot.updatePosition()
+            bot.makeMovement('right', {"delay": EDGE_ROTATION_DELAY},edge_rotation=True)
+            # bot.move(closest_ball)

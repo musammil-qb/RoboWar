@@ -5,10 +5,27 @@ POST_ID  = 92
 
 OPPONENT_ARUCO_ID = 55
 OPPONENT_ARUCO_TYPE = aruco.DICT_6X6_100
-IS_USING_GYRO = True
 
-ALLOWED_ROTATION_ERROR = 3
+# OPPONENT_ARUCO_ID = 21
+# OPPONENT_ARUCO_TYPE = aruco.DICT_5X5_100
 
+IS_USING_GYRO = False
+
+DEFENSE_INTERCEPTION_DISTANCE = 30
+ORIENT_ROTATION_ERROR_ALLOWED = [8,1] # Rotation error range
+
+MOVEMENT_CORRECTION_PERCENTAGES_MAP = {
+    20:[1],
+    30:  [0.8, 1],      # Short distances
+    90:  [0.8, 0.5, 1],
+    120:  [0.8, 0.5, 0.5, 1],
+    200: [0.8, 0.5, 0.5, 0.5, 1]  # Long distances
+}
+CORRECTION_LIMIT = 5
+DEFENSE_COOLDOWN = 8  # 5 seconds cooldown for defense mode
+
+MOVEMENT_SPEED = 10
+ROTATION_SPEED = 4
 
 #  colors
 BLUE = (255, 0, 0)
@@ -17,13 +34,15 @@ RED = (0, 0, 255)
 YELLOW = (0, 165, 255)
 GREY = (128, 128, 128)
 
-MOVEMENT_SPEED = 8
-ROTATION_SPEED = 4
 
 EDGE_ROTATION_DELAY = 1500
-DEFENSE_COOLDOWN = 5  # 5 seconds cooldown for defense mode
+BALL_COOLOFF_DISTANCE = 20
+
+IS_ARUCO_WORKING = True 
+DEFENSE_MODE = 1  # 1 Razal mode 2 Defense point movement
+
 # Sample ms to set calibration        [start, stop, step]
-BOT_CALIBRATION_MOVEMENT_MS_SAMPLES = [50, 1200, 50]
+BOT_CALIBRATION_MOVEMENT_MS_SAMPLES = [50, 1400, 50]
 BOT_CALIBRATION_ROTATION_MS_SAMPLES = [20, 450, 10]
 
 # Sleep constants
@@ -54,6 +73,7 @@ BOT_MOVEMENT_TRIM_LENGTH = 8
 EXTENDED_POINT_OFFSET = 25
 EDGE_BALL_ROTATION_DISTANCE = 8
 EDGE_BALL_MOVEMENT_DISTANCE = 15
+EDGE_BALL_MOVEMENT_BUFFER = 12
 
 
 FORWARD_OFFENCE_POINT_DISTANCE_AFTER_CENTER = 20
@@ -75,29 +95,20 @@ FORWARD_MOVEMENT_DELAY = 1000
 
 # each value percentageis a percentage
 MOVEMENT_ERROR_ALLOWED = 15
-CORRECTION_LIMIT = 5
-ORIENT_ROTATION_ERROR_ALLOWED = [8,1] # Rotation error range
 MIN_DISTANCE_FOR_ONE_DEGREE_CORRECTION = 200 #error?
 
 
-IS_ARUCO_WORKING = True 
-DEFENSE_MODE = 1  # 1 Razal mode 2 Defense point movement
 
 DEFENSE_INITIAL_MOVEMENTS = [['right',{"delay": 278}],['backward',{"delay": 270}]]
 DEFENSE_LOOP_MOVEMENTS = [['forward',{"delay": 442}],['backward',{"delay": 442}]]
 NO_DEFENSE_MOVE_WITH_NO_TARGET_BALLS = 5 #no of iterations of defense to move before
-DEFENSE_INTERCEPTION_DISTANCE = 30
 
 # Distance thresholds (in units) mapped to correction percentages
 # Higher distances need more granular corrections
-MOVEMENT_CORRECTION_PERCENTAGES_MAP = {
-    20:[1],
-    30:  [0.8, 1],      # Short distances
-    120:  [0.8, 0.5, 0.5, 1],      
-    200: [0.8, 0.5, 0.5, 0.5, 1]  # Long distances
-}
 
 # Remove old constants
 # MOVEMENT_CORRECTION_PERCENTAGES = [0.8, 0.5, 0.5, 1]
 # SWEEP_MOVEMENT_CORRECTION_PERCENTAGES = [0.05, 0.1,0.15,0.2,0.3,0.5, 0.5, 1]
 # SWEEP_MOVEMENT_CORRECTION_PERCENTAGES_2 = [0.3, 0.4, 0.5, 1]
+
+ALLOWED_ROTATION_ERROR = 3
