@@ -219,6 +219,7 @@ class Bot:
         Returns:
             str: Movement status ("Completed" or "Ball moved" if check_ball_movement is True)
         """
+        # print(f"target point: {target_point} acquire target: {acquire_target} orient only: {orient_only} ram: {ram} weighted movement: {weighted_movement} ball: {ball} check ball movement: {check_ball_movement}")
         if target_point is None or self.position is None:
             print(
                 f"target point or position failed target point:{target_point}  bot center point:{self.position}")
@@ -231,7 +232,7 @@ class Bot:
                 allowed_rotation_error = map_rotation_range(
                     distance_to_target_in_cm,0,MIN_DISTANCE_FOR_ONE_DEGREE_CORRECTION,
                     *ORIENT_ROTATION_ERROR_ALLOWED)
-            print(f"Allowed rotation error: {allowed_rotation_error}\tDistance: {distance_to_target_in_cm} distance in pixel: {distance_to_target}\t rate:{self.detection.cm_to_pixel_rate}")
+            # print(f"Allowed rotation error: {allowed_rotation_error}\tDistance: {distance_to_target_in_cm} distance in pixel: {distance_to_target}\t rate:{self.detection.cm_to_pixel_rate}")
             correction_count=0
             if IS_USING_GYRO:
                 self.makeMovement("rotate", {"angle": rotation_needed, "direction": rotation_direction, "angle_tolerance": allowed_rotation_error})
@@ -266,7 +267,7 @@ class Bot:
             if correction_percentages is None:
                 correction_percentages = MOVEMENT_CORRECTION_PERCENTAGES_MAP[max(MOVEMENT_CORRECTION_PERCENTAGES_MAP.keys())]
             
-            print(f"weighted movement distance: {round(distance_to_target_in_cm)} percentages: {correction_percentages}")
+            # print(f"weighted movement distance: {round(distance_to_target_in_cm)} percentages: {correction_percentages}")
             for  percentage in correction_percentages:
                 rotation_time_ms, rotation_direction, travel_direction, travel_time_ms, rotation_needed, _ =\
                       self.calculateMovement(target_point)

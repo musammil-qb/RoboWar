@@ -19,6 +19,7 @@ Functions:
     is_ball_moved: Check if ball has moved from its position
     distance_to_segment: Calculate distance to segment
     distance_to_line: Calculate distance to line
+    line_intersection: Find the intersection point of two line segments
 """
 
 # Function to calculate the distance between two points
@@ -172,3 +173,52 @@ def draw_bot_location(frame, bot_center_point, opponent_bot, cm_to_pixel_rate, s
         pt1 = (int(opponent_bot[0] - half_size), int(opponent_bot[1] - half_size))  # Ensure integers
         pt2 = (int(opponent_bot[0] + half_size), int(opponent_bot[1] + half_size))  # Ensure integers
         cv2.rectangle(frame, pt1, pt2, RED, 2)
+
+def line_intersection(line1_p1, line1_p2, line2_p1, line2_p2):
+    """
+    Find the intersection point of two line segments.
+    
+    Args:
+        line1_p1: First point of first line segment
+        line1_p2: Second point of first line segment
+        line2_p1: First point of second line segment
+        line2_p2: Second point of second line segment
+        
+    Returns:
+        Intersection point as (x,y) tuple if lines intersect within segments, None otherwise
+    """
+    # Convert points to numpy arrays for easier calculation
+    A = np.array(line1_p1)
+    B = np.array(line1_p2)
+    C = np.array(line2_p1)
+    D = np.array(line2_p2)
+    
+    # Line AB represented as a1x + b1y = c1
+    a1 = B[1] - A[1]
+    b1 = A[0] - B[0]
+    c1 = a1*(A[0]) + b1*(A[1])
+    
+    # Line CD represented as a2x + b2y = c2
+    a2 = D[1] - C[1]
+    b2 = C[0] - D[0]
+    c2 = a2*(C[0]) + b2*(C[1])
+    
+    determinant = a1*b2 - a2*b1
+    
+    if determinant == 0:
+        return None  # Lines are parallel
+    
+    x = (b2*c1 - b1*c2)/determinant
+    y = (a1*c2 - a2*c1)/determinant
+    
+    # Check if intersection point lies within both line segments
+    def is_point_on_segment(p, segment_start, segment_end):
+        # Add small epsilon for floating point comparison
+        epsilon = 1e-10
+        return (min(segment_start[0], segment_end[0]) - epsilon <= p[0] <= max(segment_start[0], segment_end[0]) + epsilon and
+                min(segment_start[1], segment_end[1]) - epsilon <= p[1] <= max(segment_start[1], segment_end[1]) + epsilon)
+    
+    intersection_point = (int(x), int(y))
+    if is_point_on_segment(intersection_point, A, B) and is_point_on_segment(intersection_point, C, D):
+        return intersection_point
+    return None

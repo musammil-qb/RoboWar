@@ -1,16 +1,18 @@
 import time
 import cv2
-from util import calculate_distance, point_at_distance_in_a_line, draw_bot_location
+import math
+import numpy as np
+from util import calculate_distance, point_at_distance_in_a_line, draw_bot_location, line_intersection
 from const import DEFENSE_INTERCEPTION_DISTANCE, DEFENSE_COOLDOWN, RED, \
     BLUE, SLEEP_AFTER_DISPLAYING,SLEEP_AFTER_MOVEMENT, OPPONENT_BALL_DISTANCE, ORANGE
 
 
-def calculate_blocking_point(opponent_bot, opponent_goal_post,cm_to_pixel_rate):
-    distance_of_interception = cm_to_pixel_rate * DEFENSE_INTERCEPTION_DISTANCE
-    opponent_distance_from_post = calculate_distance(opponent_bot, opponent_goal_post)
-    if opponent_distance_from_post < distance_of_interception:
-        return False
-    return point_at_distance_in_a_line(opponent_goal_post, opponent_bot, distance_of_interception)
+def calculate_blocking_point(opponent_bot, opponent_goal_post, defense_line):
+    intersection_point = line_intersection(defense_line[0], defense_line[1], opponent_bot, opponent_goal_post)
+
+    if intersection_point:
+        return intersection_point
+    return False
 
 def check_defense_needed(opponent_bot, balls, detection, defense_start_time):
     defense_needed = False
@@ -26,11 +28,9 @@ def check_defense_needed(opponent_bot, balls, detection, defense_start_time):
         
         # Only maintain cooldown if balls are near opponent
         current_time = time.time()
-        print(f"current_time: {current_time} defense_start_time: {defense_start_time} cooldown: {DEFENSE_COOLDOWN}")
         if current_time and defense_start_time:
-            print(f" diff :{current_time - defense_start_time}")
+            print(f" cooldown ends in {DEFENSE_COOLDOWN - (current_time - defense_start_time)} seconds")
         if defense_start_time is not None and current_time - defense_start_time <= DEFENSE_COOLDOWN:
-            print("between defense continung")
             if balls_near_opponent:
                 defense_needed = True
             else:
@@ -42,8 +42,9 @@ def check_defense_needed(opponent_bot, balls, detection, defense_start_time):
         print("no opponent bot")
     return defense_needed, defense_ball, defense_start_time
 
+last_defense_time = None
 
-def execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_point, defense_point_1, detection, display=True, message="defending"):
+def execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_point, defense_point_1, detection, defense_line,display=True, message="defending"):
     """
     Execute defense movement for the bot.
     
@@ -58,8 +59,9 @@ def execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_poi
         display: Whether to display visual feedback
         message: Message to print during defense
     """
+    global last_defense_time
     point_of_intercept = calculate_blocking_point(
-        opponent_bot, self_goal_center_point, detection.cm_to_pixel_rate)
+        opponent_bot, self_goal_center_point, defense_line)
     if not point_of_intercept:
         bot.move(defense_point_1, acquire_target=False)
         time.sleep(SLEEP_AFTER_MOVEMENT)
@@ -78,5 +80,31 @@ def execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_poi
         cv2.waitKey(SLEEP_AFTER_DISPLAYING)
     
     print(message)
+    if last_defense_time is None or time.time() - last_defense_time > 1.2:
+        bot.move(point_of_intercept, acquire_target=True)
+        last_defense_time = time.time()
+        time.sleep(SLEEP_AFTER_MOVEMENT)
+    bot.updatePosition()
+    bot.move(defense_line[0], orientation='forward',orient_only=True)
     
-    bot.move(point_of_intercept, acquire_target=False)
+
+def generate_defense_line(detection):
+    self_goal_center = detection.goal_posts['self']['post_center_point']
+    opponent_goal_center = detection.goal_posts['opponent']['post_center_point']
+    dx = opponent_goal_center[0] - self_goal_center[0]
+    dy = opponent_goal_center[1] - self_goal_center[1]
+    magnitude = math.sqrt(dx**2 + dy**2)
+    direction_vector = [dx/magnitude, dy/magnitude]
+    
+    # Calculate defense line points pushed in direction of opponent goal
+    push_distance_to_opponent_goal_post = 10 * detection.cm_to_pixel_rate
+    push_distance_for_extension = -8 * detection.cm_to_pixel_rate
+    
+    defense_line = [
+        (int(detection.goal_posts['self']['goal_post_end_points'][0][0] + push_distance_to_opponent_goal_post * direction_vector[0]),
+         int(detection.goal_posts['self']['goal_post_end_points'][0][1] + push_distance_to_opponent_goal_post * direction_vector[1])),
+        (int(detection.goal_posts['self']['goal_post_end_points'][1][0] + push_distance_to_opponent_goal_post * direction_vector[0]),
+         int(detection.goal_posts['self']['goal_post_end_points'][1][1] + push_distance_to_opponent_goal_post * direction_vector[1]))
+    ]
+    defense_line = [point_at_distance_in_a_line(defense_line[1],defense_line[0],push_distance_for_extension),point_at_distance_in_a_line(defense_line[0],defense_line[1],push_distance_for_extension)]
+    return defense_line

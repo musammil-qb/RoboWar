@@ -2,18 +2,14 @@ import time
 import cv2
 
 from targetDetection import filter_balls, choose_next_target_point
-from util import draw_polygons, calculate_distance
-from edge_logic_new import find_target_and_direction,edge_move
-from random_movement_points import random_movement_algorithm, get_defense_points
+from util import draw_polygons
+from edge_logic_new import edge_move
+from random_movement_points import  get_defense_points
 from score_goal import score_goal
-from defense import check_defense_needed, execute_defense
+from defense import check_defense_needed, execute_defense, generate_defense_line
 from sweep_corners import find_sweep_movements, sweep, find_best_sweep_movement
-from const import BLUE, GREEN, RED,  YELLOW, \
-    SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, \
-    EXTENDED_POINT_OFFSET, EDGE_BALL_ROTATION_DISTANCE, SLEEP_AFTER_DISPLAYING,\
-    EDGE_BALL_MOVEMENT_DISTANCE, SLEEP_AFTER_DEFENSE, \
-    NO_DEFENSE_MOVE_WITH_NO_TARGET_BALLS, DEFENSE_MODE, \
-    EDGE_ROTATION_DELAY, DEFENSE_COOLDOWN
+from const import BLUE, GREEN, RED,  YELLOW,  SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, \
+    EXTENDED_POINT_OFFSET, SLEEP_AFTER_DISPLAYING
 
 
 target_point = None
@@ -54,6 +50,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     # Get defense points - Pre-calculated defensive positions
     defense_point_1, defense_point_2, defense_center = get_defense_points(detection)
     
+    defense_line = generate_defense_line(detection)
     # Strategy selection - Allows dynamic switching between play styles
     strategy = input("Enter strategy (o: offensive-first, d: defensive-first, s: sweep, e: edge): ").lower()
     if strategy == "":
@@ -123,7 +120,7 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 # First check if there's an ongoing defense within cooldown
                 if defense_start_time is not None and defense_needed:
                     execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_point, 
-                                 defense_point_1, detection, display, "continuing defense within cooldown")
+                                 defense_point_1, detection,defense_line, display, "continuing defense within cooldown")
                     continue
                 
                 # Then try to score if possible (even if defense is needed but not started)
@@ -135,14 +132,14 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 elif defense_needed:
                     defense_start_time = time.time()
                     execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_point, 
-                                 defense_point_1, detection, display, "starting new defense - no scorable balls")
+                                 defense_point_1, detection,defense_line, display, "starting new defense - no scorable balls")
                     continue
             
             elif 'd' in strategy:  # Defensive-first strategy
                 # Always check defense first (cooldown is handled by check_defense_needed)
                 if defense_needed:
                     execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_point, 
-                                 defense_point_1, detection, display)
+                                 defense_point_1, detection,defense_line, display)
                     continue
                 
                 # If no defense needed, try to score
