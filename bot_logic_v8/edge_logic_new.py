@@ -4,7 +4,7 @@ import time
 import cv2
 
 
-from util import calculate_distance, distance_to_line
+from util import calculate_distance, distance_to_line, draw_bot_location
 from const import EDGE_BALL_MOVEMENT_DISTANCE,EDGE_ROTATION_DELAY,EDGE_BALL_ROTATION_DISTANCE,\
     SLEEP_AFTER_DISPLAYING,SLEEP_AFTER_MOVEMENT,BLUE,YELLOW
 
@@ -80,7 +80,7 @@ def find_target_and_direction(corners, ball, goal_point, self_goal_point,  self_
 
 
 def edge_move(balls, bot_center_point, field_corners, 
-              goal_center_point, self_goal_center_point, self_edge, opponent_edge,detection,bot,display=True):
+              goal_center_point, self_goal_center_point, self_edge, opponent_edge,detection,bot,opponent_bot,display=True):
     closest_ball = min(balls, key=lambda ball: calculate_distance(ball, bot_center_point))
     target_point, edge_movement_direction = find_target_and_direction(
         field_corners, closest_ball, goal_center_point,self_goal_center_point, self_edge, opponent_edge,
@@ -90,6 +90,7 @@ def edge_move(balls, bot_center_point, field_corners,
         frame = detection.video_stream.read()
         cv2.circle(frame, target_point, 5, YELLOW, -1)
         cv2.putText(frame, str(edge_movement_direction), target_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, BLUE, 2)
+        draw_bot_location(frame, bot_center_point, opponent_bot, detection.cm_to_pixel_rate)
         cv2.imshow('Feed', frame)
         cv2.waitKey(SLEEP_AFTER_DISPLAYING)
     if bot:

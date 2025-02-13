@@ -3,7 +3,7 @@ from const import SLEEP_AFTER_DISPLAYING, BLUE, GREEN, YELLOW, SLEEP_AFTER_GOAL,
     RED,SLEEP_AFTER_MOVEMENT,SLEEP_BEFORE_GOAL
 from collision_avoidance import find_pit_stop_to_avoid_ball, is_collision_chance_closest_point
 import time
-from util import  is_ball_moved
+from util import  is_ball_moved, draw_bot_location
 
 """
 Goal scoring module for robot soccer system.
@@ -15,7 +15,7 @@ Functions:
     score_goal: Execute goal scoring strategy
 """
 
-def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point,edge_counter, display=True):
+def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, opponent_bot, display=True):
     print('target locked')
     target_point = next_target_point['target_point']
     goal_point = next_target_point['goal_point']
@@ -24,6 +24,7 @@ def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement
         frame = detection.video_stream.read()
         cv2.circle(frame, target_point, 5, BLUE, -1)
         cv2.circle(frame, goal_point, 5, GREEN, -1)
+        draw_bot_location(frame, bot_center_point, opponent_bot, detection.cm_to_pixel_rate)
         cv2.imshow('Feed', frame)
         cv2.waitKey(SLEEP_AFTER_DISPLAYING)
     time.sleep(SLEEP_BEFORE_GOAL)
@@ -37,11 +38,13 @@ def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement
     if is_collision_chance:
             cv2.circle(frame, (int(pit_stop[0]),int(pit_stop[1])), 5, RED, -1)
             cv2.circle(frame, target_point, 5, YELLOW, -1)
+            draw_bot_location(frame, bot_center_point, opponent_bot, detection.cm_to_pixel_rate)
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
     if bot and not is_collision_chance:
         if display:
             cv2.circle(frame, target_point, 5, YELLOW, -1)
+            draw_bot_location(frame, bot_center_point, opponent_bot, detection.cm_to_pixel_rate)
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
         bot.updatePosition()
@@ -68,6 +71,7 @@ def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement
         if display:
             # frame = detection.video_stream.read()
             cv2.circle(frame, target_point, 5, YELLOW, -1)
+            draw_bot_location(frame, bot_center_point, opponent_bot, detection.cm_to_pixel_rate)
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
         bot.updatePosition(detection_object['aruco']['bot_center_point'],
@@ -84,6 +88,7 @@ def score_goal(next_target_point, detection, bot, bot_center_point, bot_movement
         if display:
             # frame = detection.video_stream.read()
             cv2.circle(frame, goal_point, 5, YELLOW, -1)
+            draw_bot_location(frame, bot_center_point, opponent_bot, detection.cm_to_pixel_rate)
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
         bot.updatePosition(detection_object['aruco']['bot_center_point'],

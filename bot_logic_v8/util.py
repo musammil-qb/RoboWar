@@ -1,7 +1,7 @@
 import math
 import cv2
 import numpy as np
-from const import GREEN,BALL_MOVEMENT_BUFFER
+from const import GREEN, BALL_MOVEMENT_BUFFER, RED
 
 """
 Utility functions module for robot soccer system.
@@ -155,3 +155,20 @@ def is_ball_moved(balls, target_ball,cm_to_pixel_rate):
         if  distance <= BALL_MOVEMENT_BUFFER:
             ball_moved = False
     return ball_moved
+
+
+def draw_bot_location(frame, bot_center_point, opponent_bot, cm_to_pixel_rate, square_size=20):
+    if bot_center_point:
+        square_size = 20 * cm_to_pixel_rate  # Size of the square in pixels
+        half_size = square_size // 2
+        pt1 = (int(bot_center_point[0] - half_size), int(bot_center_point[1] - half_size))  # Ensure integers
+        pt2 = (int(bot_center_point[0] + half_size), int(bot_center_point[1] + half_size))  # Ensure integers
+        cv2.rectangle(frame, pt1, pt2, GREEN, 2)
+
+    # Draw opponent bot location (red square)
+    if opponent_bot:
+        square_size = 20 * cm_to_pixel_rate  # Size of the square in pixels
+        half_size = square_size // 2
+        pt1 = (int(opponent_bot[0] - half_size), int(opponent_bot[1] - half_size))  # Ensure integers
+        pt2 = (int(opponent_bot[0] + half_size), int(opponent_bot[1] + half_size))  # Ensure integers
+        cv2.rectangle(frame, pt1, pt2, RED, 2)

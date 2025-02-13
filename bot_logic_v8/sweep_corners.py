@@ -2,9 +2,9 @@ import numpy as np
 import cv2
 import time
 
-from const import BOT_MOVEMENT_TRIM_LENGTH, GREEN, BLUE,  EDGE_ROTATION_DELAY
+from const import BOT_MOVEMENT_TRIM_LENGTH, GREEN, BLUE,  EDGE_ROTATION_DELAY, RED
 from util import point_at_distance_in_a_line,\
-      distance_to_line, calculate_distance
+      distance_to_line, draw_bot_location
 
 """
 Corner sweeping module for robot soccer system.
@@ -43,25 +43,29 @@ def generate_sweep_points(my_posts, opponent_posts, corners, sweep_distance):
         clockwise_points = [
             point_at_distance_in_a_line(my_post_top,opponent_post_top,sweep_distance),
             top_left, 
+            ((top_left[0] + top_right[0]) // 2, (top_left[1] + top_right[1]) // 2),
             top_right, 
             point_at_distance_in_a_line(opponent_post_top,my_post_top,sweep_distance)
         ]
         anti_clockwise_points = [
             point_at_distance_in_a_line(my_post_bottom,opponent_post_bottom,sweep_distance),
             bottom_left,
+            ((bottom_left[0] + bottom_right[0]) // 2, (bottom_left[1] + bottom_right[1]) // 2),
             bottom_right,
             point_at_distance_in_a_line(opponent_post_bottom,my_post_bottom,sweep_distance)
         ]
     else:  # Self post is on the right
         clockwise_points = [
             point_at_distance_in_a_line(my_post_bottom,opponent_post_bottom,sweep_distance),
-                bottom_right,
+            bottom_right,
+            ((bottom_right[0] + bottom_left[0]) // 2, (bottom_right[1] + bottom_left[1]) // 2),
             bottom_left,
             point_at_distance_in_a_line(opponent_post_bottom,my_post_bottom,sweep_distance)
         ]
         anti_clockwise_points = [
             point_at_distance_in_a_line(my_post_top,opponent_post_top,sweep_distance),
             top_right,
+            ((top_right[0] + top_left[0]) // 2, (top_right[1] + top_left[1]) // 2),
             top_left,
             point_at_distance_in_a_line(opponent_post_top,my_post_top,sweep_distance)
         ]
@@ -80,48 +84,60 @@ def generate_sweep_movements(points, direction):
 
         {'start_point':points[1],'end_point':points[2],'idx':1,
          'rotation':'right' if direction == 'clockwise' else 'left'},
-        
+    
         {'start_point':points[2],'end_point':points[3],'idx':2,
+         'rotation':'right' if direction == 'clockwise' else 'left'},
+
+        {'start_point':points[3],'end_point':points[4],'idx':3,
          'rotation':'right' if direction == 'clockwise' else 'left'},
     ]
 
 
-def find_best_sweep_movement(sweep_movements, balls, cm_to_pixel_rate):
+def find_best_sweep_movement(sweep_movements, balls, cm_to_pixel_rate,detection):
     sweep_movement_score =[]
     for sweep_movement in sweep_movements:
+        sweep_balls = []
         ball_count = 0
         for ball in balls:
             distance, _ = distance_to_line(
                 ball,np.array(sweep_movement['start_point']),
                 np.array(sweep_movement['end_point']))
+            print(f"distance: {distance} ball: {ball} sweep_movement: {sweep_movement}")
             if distance <= 15*cm_to_pixel_rate:
                 ball_count += 1
+                sweep_balls.append(ball)
             # if ball_count > 2:
             #     return sweep_movement
-        sweep_movement_score.append({'ball_count':ball_count,'sweep_movement':sweep_movement})
+        sweep_movement_score.append({'ball_count':ball_count,'sweep_movement':sweep_movement,'sweep_balls':sweep_balls})
+    # Create a detailed visualization of sweep movements from sweep_movement_score
     sorted_sweep_movements = sorted(sweep_movement_score,key=lambda x:x['ball_count'],reverse=True)
-    return sorted_sweep_movements[0]['sweep_movement']
+
+    return sorted_sweep_movements[0]['sweep_movement'], sorted_sweep_movements[0]['sweep_balls']
 
 
-def sweep(detection,sweep_movement,bot,display):
+def sweep(detection,sweep_movement,bot,opponent_bot,display,sweep_balls):
     frame = detection.video_stream.read()
     if display:
         cv2.circle(frame, sweep_movement['start_point'], 5, BLUE, -1)
         cv2.circle(frame, sweep_movement['end_point'], 5, GREEN, -1)
+        draw_bot_location(frame, bot.position, opponent_bot, detection.cm_to_pixel_rate)
+        print(f"sweep balls: {sweep_balls}")
+        for ball in sweep_balls:
+            cv2.circle(frame, ball, 3, RED, -1)
         cv2.imshow('Feed',frame)
-        cv2.waitKey(1)
+        cv2.waitKey(8000)
     bot.updatePosition()
     bot.move(sweep_movement['start_point'])
     if sweep_movement['idx']!=0:
         bot.updatePosition()
         bot.makeMovement(sweep_movement['rotation'], {"delay": EDGE_ROTATION_DELAY}, edge_rotation=True)
         time.sleep(0.2)
-        bot.move(sweep_movement['start_point'],acquire_target=False)
 
     # points = find_points_between(sweep_movement['start_point'], sweep_movement['end_point'],max_length=detection.cm_to_pixel_rate * 20)
     # for point in points:
     #     bot.updatePosition()
     bot.move(sweep_movement['start_point'],acquire_target=True) 
+    bot.move(sweep_movement['end_point'], orient_only=True)
     bot.move(sweep_movement['end_point'], acquire_target=True)
 
     bot.makeMovement(sweep_movement['rotation'], {"delay": EDGE_ROTATION_DELAY}, edge_rotation=True)

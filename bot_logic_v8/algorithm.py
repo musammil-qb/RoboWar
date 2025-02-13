@@ -6,7 +6,7 @@ from util import draw_polygons, calculate_distance
 from edge_logic_new import find_target_and_direction,edge_move
 from random_movement_points import random_movement_algorithm, get_defense_points
 from score_goal import score_goal
-from defense import calculate_blocking_point, check_defense_needed
+from defense import check_defense_needed, execute_defense
 from sweep_corners import find_sweep_movements, sweep, find_best_sweep_movement
 from const import BLUE, GREEN, RED,  YELLOW, \
     SLEEP_AFTER_MOVEMENT, SLEEP_FOR_KEY_PRESS, SLEEP_BALL_NOT_FOUND, \
@@ -16,12 +16,7 @@ from const import BLUE, GREEN, RED,  YELLOW, \
     EDGE_ROTATION_DELAY, DEFENSE_COOLDOWN
 
 
-target_point,selected_point = None, None
-
-def select_point(event, x, y, flags, param):
-    global selected_point
-    if event == cv2.EVENT_LBUTTONDOWN:
-        selected_point = (x, y)
+target_point = None
 
 def algorithm(detection, bot, display=True, test=False, image=False, disable_algorithm=False):
     """
@@ -37,15 +32,11 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     The algorithm follows this priority:
     -  Scoring > Defense > Edge handling > Sweeping
     """
-    global target_point,selected_point
+    global target_point
     edge_movement_direction, defense_start_time = None, None
     
     # Initialize sweep movements - Pre-calculated paths for ball collection
     sweep_movements = find_sweep_movements(detection)
-
-    if display:
-        cv2.namedWindow("Feed")
-        cv2.setMouseCallback("Feed",select_point)
 
     # Get key field positions - Cached for efficiency
     goal_center_point = detection.goal_posts['opponent']['post_center_point']
@@ -64,8 +55,9 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
     defense_point_1, defense_point_2, defense_center = get_defense_points(detection)
     
     # Strategy selection - Allows dynamic switching between play styles
-    strategy = input("Enter staring strategy to start: ")
-    
+    strategy = input("Enter strategy (o: offensive-first, d: defensive-first, s: sweep, e: edge): ").lower()
+    if strategy == "":
+        strategy = "oe"
     # Edge counter - Prevents infinite edge handling loops
     edge_counter = 0
     
@@ -88,29 +80,14 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             cv2.line(frame, *detection.goal_posts['opponent']['goal_post_end_points'],YELLOW, 2)
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-            
-        # Handle manual point selection (for testing/debugging)
-        if selected_point is not None:
-            if display:
-                cv2.circle(frame,selected_point,5,RED,5)
-                cv2.imshow('Feed', frame)
-                cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-            if bot:
-                bot.updatePosition()
-                bot.move(selected_point)
-                time.sleep(SLEEP_AFTER_MOVEMENT)
-            selected_point = None
 
         # Process current frame and detect objects
         detection_object = detection.process_frame()
         bot_center_point, balls = detection_object['aruco']['bot_center_point'], detection_object['yolo']['balls']
         opponent_bot = detection_object['aruco']['opponent_bot']
         
-        # Update bot position if needed
-        if not bot_center_point and bot:
-            bot.updatePosition(detection_object['aruco']['bot_center_point'],
-                               detection_object['aruco']['bot_angle'])
-            bot_center_point = bot.position
+        bot.updatePosition(bot_center_point,detection_object['aruco']['bot_angle'])
+            
             
         # Handle case when no balls are detected
         if balls == []:
@@ -135,67 +112,60 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
             filtered_balls, intersection_points = filter_balls(
                 trimmed_field, balls, goal_center_point,
                 buffer_distance=int(EXTENDED_POINT_OFFSET*detection.cm_to_pixel_rate))
-            next_target_point = choose_next_target_point(intersection_points, bot_center_point)
-            
+            next_target_point = choose_next_target_point(intersection_points, bot_center_point,opponent_bot,goal_center_point,detection,test)
+
+
             # Check if defense is needed
-            defense_needed, defense_ball,defense_start_time = check_defense_needed(opponent_bot, balls, detection, defense_start_time)
+            defense_needed, defense_ball, defense_start_time = check_defense_needed(opponent_bot, balls, detection, defense_start_time)
             
-            # Handle scoring if no defense needed
-            if next_target_point is not None and (not defense_needed or defense_start_time is None):
-                if not score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, edge_counter, display=True):
+            # Implement strategy-based decision making
+            if 'o' in strategy:  # Offensive-first strategy
+                # First check if there's an ongoing defense within cooldown
+                if defense_start_time is not None and defense_needed:
+                    execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_point, 
+                                 defense_point_1, detection, display, "continuing defense within cooldown")
                     continue
-
-            # Handle defense if needed
-            elif defense_needed:
-                if display:
-                    frame = detection.video_stream.read()
-                    for ball in balls:
-                        if ball == defense_ball:
-                            cv2.circle(frame, ball, 5, RED, -1)
-                        else:
-                            cv2.circle(frame, ball, 5, BLUE, -1)
-                    cv2.imshow('Feed', frame)
-                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-                current_time = time.time()
-                if defense_start_time is None:
-                    defense_start_time = current_time
-                    
-                print(f"defending (cooldown: {DEFENSE_COOLDOWN - (current_time - defense_start_time):.1f}s remaining)")
-                point_of_intercept = calculate_blocking_point(
-                    opponent_bot, self_goal_center_point, detection.cm_to_pixel_rate)
-                if not point_of_intercept:
-                    bot.updatePosition()
-                    bot.move(defense_point_1, acquire_target=False)
-                    point_of_intercept = detection.default_point
                 
-                bot.updatePosition()
-                bot.move(point_of_intercept, acquire_target=False)
-                continue
-
-            # Handle case when no target balls or defense needed
+                # Then try to score if possible (even if defense is needed but not started)
+                if next_target_point is not None:
+                    score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, opponent_bot, display=True)
+                    continue
+                
+                # If no scorable ball and defense is needed, start defense
+                elif defense_needed:
+                    defense_start_time = time.time()
+                    execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_point, 
+                                 defense_point_1, detection, display, "starting new defense - no scorable balls")
+                    continue
+            
+            elif 'd' in strategy:  # Defensive-first strategy
+                # Always check defense first (cooldown is handled by check_defense_needed)
+                if defense_needed:
+                    execute_defense(bot, opponent_bot, balls, defense_ball, self_goal_center_point, 
+                                 defense_point_1, detection, display)
+                    continue
+                
+                # If no defense needed, try to score
+                elif next_target_point is not None:
+                    score_goal(next_target_point, detection, bot, bot_center_point, bot_movement_trimmed_field, goal_center_point, opponent_bot, display=True)
+                    continue
+            
+            # If no primary actions (score/defend) are possible, use secondary strategies
+            print("no primary actions possible, trying secondary strategies")
+            
+            # Execute sweep strategy if selected
+            if "s" in strategy:
+                print("sweeping")
+                best_sweep_movement, sweep_balls = find_best_sweep_movement(sweep_movements, balls, detection.cm_to_pixel_rate,detection)
+                sweep(detection, best_sweep_movement, bot, opponent_bot, display, sweep_balls)
             else:
-                print("no target balls or defense needed")
-                
-                if display:
-                    frame = detection.video_stream.read()
-                    for ball in balls:
-                        cv2.circle(frame, ball, 5, BLUE, -1)
-                    cv2.imshow('Feed', frame)
-                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-
-                # Execute sweep strategy if selected
-                if "s" in strategy:
-                    print("sweeping")
-                    best_sweep_movement = find_best_sweep_movement(sweep_movements, balls, detection.cm_to_pixel_rate)
-                    sweep(detection, best_sweep_movement, bot, display)
+                edge_counter += 1
+                print("Targeting edge ball")
+                if balls and bot_center_point:
+                    edge_move(balls, bot_center_point, field_corners, goal_center_point, 
+                                self_goal_center_point, self_edge, opponent_edge,detection,bot,opponent_bot,display=True)
                 else:
-                    edge_counter += 1
-                    print("Targeting edge ball")
-                    if balls and bot_center_point:
-                        edge_move(balls, bot_center_point, field_corners, goal_center_point, 
-                                  self_goal_center_point, self_edge, opponent_edge,detection,bot,display=True)
-                    else:
-                        print("No possible movement found")
+                    print("No possible movement found")
 
         
         if display and test and not disable_algorithm:
@@ -206,37 +176,6 @@ def algorithm(detection, bot, display=True, test=False, image=False, disable_alg
                 cv2.circle(frame, possible_movement['goal_point'], 5, YELLOW, -1)
             cv2.imshow('Feed', frame)
             cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-        if not disable_algorithm and next_target_point is None and strategy == "e" and edge_counter <=5:
-            edge_counter += 1
-            print("Targeting edge ball")
-            if balls and bot_center_point:
-                closest_ball = min(balls, key=lambda ball: calculate_distance(ball, bot_center_point))
-                target_point, edge_movement_direction = find_target_and_direction(
-                    field_corners, closest_ball, goal_center_point,self_goal_center_point, self_edge, opponent_edge,
-                    detection.cm_to_pixel_rate * EDGE_BALL_ROTATION_DISTANCE, detection.cm_to_pixel_rate * EDGE_BALL_MOVEMENT_DISTANCE
-                )
-                if display:
-                    frame = detection.video_stream.read()
-                    cv2.circle(frame, target_point, 5, YELLOW, -1)
-                    cv2.putText(frame, str(edge_movement_direction), target_point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, BLUE, 2)
-                    cv2.imshow('Feed', frame)
-                    cv2.waitKey(SLEEP_AFTER_DISPLAYING)
-                if bot:
-                    bot.updatePosition()
-                    bot.move(target_point)
-                    time.sleep(SLEEP_AFTER_MOVEMENT)
-                    if edge_movement_direction in ["right","left"]:
-                        bot.makeMovement(edge_movement_direction, {"delay": EDGE_ROTATION_DELAY},edge_rotation=True)
-                    else:
-                        bot.move(closest_ball)
-                        bot.updatePosition()
-            else:
-                print("No possible shots found")
-        elif strategy == "e":
-            print("go to default location")
-            bot.updatePosition()
-            bot.move(detection.default_point)
-            edge_counter = 0
         
         print("loop end")
         if image:
